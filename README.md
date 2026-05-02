@@ -37,7 +37,6 @@ Each skill lives in its own directory under `.agents/skills/`. The only required
 - `fix-errors` — guidance for fixing build, lint, formatting, and test failures.
 - `resolve-merge-conflicts` — workflow and helper script for resolving git conflicts with compact context.
 - `review-pr` — produces structured PR review feedback from local diff artifacts.
-- `rust-unit-tests` — guidance for writing and running Rust unit tests.
 
 ### Skill authoring
 
