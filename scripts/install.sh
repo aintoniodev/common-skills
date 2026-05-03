@@ -15,7 +15,7 @@ Clone common-skills and copy its skills into ${DEST_SKILLS_DIR}.
 
 Options:
   -d, --clone-dir DIR   Directory to clone common-skills into.
-      --dest-dir DIR    Directory to install skills into.
+      --dest-dir DIR    Base directory whose .agents/skills directory should receive skills.
   -h, --help            Show this help message.
 EOF
 }
@@ -32,10 +32,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --dest-dir)
       if [[ $# -lt 2 || -z "$2" ]]; then
-        echo "error: --dest-dir requires a directory" >&2
+        echo "error: --dest-dir requires a base directory" >&2
         exit 1
       fi
-      DEST_SKILLS_DIR="$2"
+      DEST_SKILLS_DIR="$2/.agents/skills"
       shift 2
       ;;
     -h|--help)

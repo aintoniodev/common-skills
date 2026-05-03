@@ -82,13 +82,13 @@ To clone into a specific temporary directory instead of using an automatically c
 To install into a repository-local skills directory instead of `~/.agents/skills`, run:
 
 ```sh
-./scripts/install.sh --dest-dir /path/to/repo/.agents/skills
+./scripts/install.sh --dest-dir /path/to/repo
 ```
 
 When using the piped installer, pass installer arguments after `bash -s --`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/warpdotdev/common-skills/main/scripts/install.sh | bash -s -- --dest-dir /path/to/repo/.agents/skills
+curl -fsSL https://raw.githubusercontent.com/warpdotdev/common-skills/main/scripts/install.sh | bash -s -- --dest-dir /path/to/repo
 ```
 
 ### Windows
@@ -108,7 +108,7 @@ To clone into a specific temporary directory instead of using an automatically c
 To install into a repository-local skills directory instead of `~/.agents\skills`, run:
 
 ```powershell
-.\scripts\install.ps1 -DestSkillsDir C:\path\to\repo\.agents\skills
+.\scripts\install.ps1 -DestDir C:\path\to\repo
 ```
 
 Both installers clone this repository, copy each skill directory from `.agents/skills/` into the destination skills directory, and prompt before overwriting an existing skill with the same name. If you decline the prompt, that skill is skipped and the installer continues.
