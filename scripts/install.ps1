@@ -6,7 +6,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$RepoUrl = "https://github.com/warpdotdev/common-skills/"
+if ([string]::IsNullOrWhiteSpace($env:WARP_COMMON_SKILLS_REPO_URL)) {
+  $RepoUrl = "https://github.com/warpdotdev/common-skills/"
+} else {
+  $RepoUrl = $env:WARP_COMMON_SKILLS_REPO_URL
+}
 $CleanupCloneDir = $false
 
 function Show-Usage {

@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-REPO_URL="https://github.com/warpdotdev/common-skills/"
+REPO_URL="${WARP_COMMON_SKILLS_REPO_URL:-https://github.com/warpdotdev/common-skills/}"
 DEST_SKILLS_DIR="${HOME}/.agents/skills"
 CLONE_DIR=""
 CLEANUP_CLONE_DIR=0
@@ -92,7 +92,13 @@ should_overwrite_skill() {
   local response=""
 
   while true; do
-    read -r -p "Skill '${skill_name}' already exists. Overwrite it? [y/N] " response
+    if [[ -t 0 || "$0" != "bash" ]]; then
+      read -r -p "Skill '${skill_name}' already exists. Overwrite it? [y/N] " response || response=""
+    elif [[ -r /dev/tty ]]; then
+      read -r -p "Skill '${skill_name}' already exists. Overwrite it? [y/N] " response < /dev/tty || response=""
+    else
+      response=""
+    fi
     case "${response}" in
       [yY]|[yY][eE][sS])
         return 0
@@ -109,8 +115,12 @@ should_overwrite_skill() {
 
 installed_skills=()
 skipped_skills=()
-
+skill_names=()
 while IFS= read -r skill_name; do
+  skill_names+=("${skill_name}")
+done < <(find "${SOURCE_SKILLS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)
+
+for skill_name in "${skill_names[@]}"; do
   source_skill_dir="${SOURCE_SKILLS_DIR}/${skill_name}"
   dest_skill_dir="${DEST_SKILLS_DIR}/${skill_name}"
 
@@ -125,7 +135,7 @@ while IFS= read -r skill_name; do
 
   cp -R "${source_skill_dir}" "${dest_skill_dir}"
   installed_skills+=("${skill_name}")
-done < <(find "${SOURCE_SKILLS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)
+done
 
 echo "Installed common-skills into ${DEST_SKILLS_DIR}"
 
