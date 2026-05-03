@@ -63,6 +63,38 @@ Some skills copied here may still contain repository-specific examples, paths, c
 
 ## Usage
 
-Consumers can copy or sync selected directories from `.agents/skills/` into a repository's own `.agents/skills/` directory.
+Consumers can install the shared skills into `~/.agents/skills`.
+
+### macOS and Linux
+
+Run the Bash installer:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/warpdotdev/common-skills/main/scripts/install.sh | bash
+```
+
+To clone into a specific temporary directory instead of using an automatically created one, run:
+
+```sh
+./scripts/install.sh --clone-dir /path/to/empty/clone-dir
+```
+
+### Windows
+
+Run the PowerShell installer:
+
+```powershell
+irm https://raw.githubusercontent.com/warpdotdev/common-skills/main/scripts/install.ps1 | iex
+```
+
+To clone into a specific temporary directory instead of using an automatically created one, run:
+
+```powershell
+.\scripts\install.ps1 -CloneDir C:\path\to\empty\clone-dir
+```
+
+Both installers clone this repository, copy each skill directory from `.agents/skills/` into `~/.agents/skills`, and prompt before overwriting an existing skill with the same name. If you decline the prompt, that skill is skipped and the installer continues.
+
+You can also copy or sync selected directories from `.agents/skills/` into a repository's own `.agents/skills/` directory.
 
 Prefer copying only the skills a repository actually needs. If a common skill needs repository-specific behavior, add a small local companion skill in that repository rather than forking the shared skill unless the change is useful everywhere.
