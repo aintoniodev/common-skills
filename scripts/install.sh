@@ -9,12 +9,13 @@ CLEANUP_CLONE_DIR=0
 
 usage() {
   cat <<EOF
-Usage: ./install.sh [--clone-dir DIR]
+Usage: ./install.sh [--clone-dir DIR] [--dest-dir DIR]
 
 Clone common-skills and copy its skills into ${DEST_SKILLS_DIR}.
 
 Options:
   -d, --clone-dir DIR   Directory to clone common-skills into.
+      --dest-dir DIR    Directory to install skills into.
   -h, --help            Show this help message.
 EOF
 }
@@ -27,6 +28,14 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       CLONE_DIR="$2"
+      shift 2
+      ;;
+    --dest-dir)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        echo "error: --dest-dir requires a directory" >&2
+        exit 1
+      fi
+      DEST_SKILLS_DIR="$2"
       shift 2
       ;;
     -h|--help)
