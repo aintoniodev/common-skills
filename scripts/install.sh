@@ -77,10 +77,57 @@ if [[ ! -d "${SOURCE_SKILLS_DIR}" ]]; then
 fi
 
 mkdir -p "${DEST_SKILLS_DIR}"
-cp -R "${SOURCE_SKILLS_DIR}/." "${DEST_SKILLS_DIR}/"
+
+should_overwrite_skill() {
+  local skill_name="$1"
+  local response=""
+
+  while true; do
+    read -r -p "Skill '${skill_name}' already exists. Overwrite it? [y/N] " response
+    case "${response}" in
+      [yY]|[yY][eE][sS])
+        return 0
+        ;;
+      ""|[nN]|[nN][oO])
+        return 1
+        ;;
+      *)
+        echo "Please answer yes or no."
+        ;;
+    esac
+  done
+}
+
+installed_skills=()
+skipped_skills=()
+
+while IFS= read -r skill_name; do
+  source_skill_dir="${SOURCE_SKILLS_DIR}/${skill_name}"
+  dest_skill_dir="${DEST_SKILLS_DIR}/${skill_name}"
+
+  if [[ -e "${dest_skill_dir}" ]]; then
+    if ! should_overwrite_skill "${skill_name}"; then
+      skipped_skills+=("${skill_name}")
+      continue
+    fi
+
+    rm -rf "${dest_skill_dir}"
+  fi
+
+  cp -R "${source_skill_dir}" "${dest_skill_dir}"
+  installed_skills+=("${skill_name}")
+done < <(find "${SOURCE_SKILLS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)
 
 echo "Installed common-skills into ${DEST_SKILLS_DIR}"
-echo "Installed skills:"
-find "${SOURCE_SKILLS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort | while read -r skill_name; do
-  echo "  - ${skill_name}"
-done
+
+if [[ "${#installed_skills[@]}" -gt 0 ]]; then
+  echo "Installed skills:"
+  printf '  - %s\n' "${installed_skills[@]}"
+else
+  echo "No skills installed."
+fi
+
+if [[ "${#skipped_skills[@]}" -gt 0 ]]; then
+  echo "Skipped existing skills:"
+  printf '  - %s\n' "${skipped_skills[@]}"
+fi
