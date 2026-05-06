@@ -63,55 +63,31 @@ Some skills copied here may still contain repository-specific examples, paths, c
 
 ## Usage
 
-Consumers can install the shared skills into `~/.agents/skills`.
+Consumers can install the shared skills with the `skills` CLI.
 
-### macOS and Linux
-
-Run the Bash installer:
+List available skills:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/warpdotdev/common-skills/main/scripts/install.sh | bash
+npx skills@latest add warpdotdev/common-skills --list
 ```
 
-To clone into a specific temporary directory instead of using an automatically created one, run:
+Install all common skills for Warp globally:
 
 ```sh
-./scripts/install.sh --clone-dir /path/to/empty/clone-dir
+npx skills@latest add warpdotdev/common-skills --skill '*' --agent warp --global
 ```
 
-To install into a repository-local skills directory instead of `~/.agents/skills`, run:
+Install one skill:
 
 ```sh
-./scripts/install.sh --dest-dir /path/to/repo
+npx skills@latest add warpdotdev/common-skills --skill write-tech-spec --agent warp --global
 ```
 
-When using the piped installer, pass installer arguments after `bash -s --`:
+Update installed skills later:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/warpdotdev/common-skills/main/scripts/install.sh | bash -s -- --dest-dir /path/to/repo
+npx skills@latest update --global --agent warp
 ```
-
-### Windows
-
-Run the PowerShell installer:
-
-```powershell
-irm https://raw.githubusercontent.com/warpdotdev/common-skills/main/scripts/install.ps1 | iex
-```
-
-To clone into a specific temporary directory instead of using an automatically created one, run:
-
-```powershell
-.\scripts\install.ps1 -CloneDir C:\path\to\empty\clone-dir
-```
-
-To install into a repository-local skills directory instead of `~/.agents\skills`, run:
-
-```powershell
-.\scripts\install.ps1 -DestDir C:\path\to\repo
-```
-
-Both installers clone this repository, copy each skill directory from `.agents/skills/` into the destination skills directory, and prompt before overwriting an existing skill with the same name. If you decline the prompt, that skill is skipped and the installer continues.
 
 You can also copy or sync selected directories from `.agents/skills/` into a repository's own `.agents/skills/` directory.
 
