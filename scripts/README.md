@@ -14,7 +14,7 @@ scripts/install_common_skills --global
 ```
 Install only when the lock hash has changed or a locked skill is missing:
 ```sh
-scripts/install_common_skills --if-needed --non-interactive
+scripts/install_common_skills --project --if-needed --non-interactive
 ```
 Verify the installed skills without installing:
 ```sh
@@ -36,11 +36,12 @@ The script supports:
 - `--global`: install into `~/.agents/skills`.
 - `--if-needed`: skip when the stamp matches the lock and locked skills are present.
 - `--prompt-for-target`: prompt for project/global when no explicit target is set.
-- `--non-interactive`: do not prompt; use detected/default target.
+- `--non-interactive`: do not prompt; fail when no target is explicit.
 - `--force`: install even if already up to date.
 - `--quiet`: suppress no-op output.
 - `--verify-only`: verify installed skills match `skills-lock.json` without installing.
 Successful install and skip paths verify that exactly one install target contains the locked common skills and that each installed skill matches `skills-lock.json`.
+Global installs are shared across client repositories. A second repo pinned to the same lock verifies and succeeds without unnecessarily reinstalling; a repo pinned to a different lock fails with a version-mismatch error instead of overwriting the shared global install.
 ## Remove script
 `remove_common_skills` removes common agent skills listed in `skills-lock.json`.
 The script supports:
@@ -59,7 +60,7 @@ Verification fails if:
 - Any installed skill directory hash differs from the lock file.
 ## Environment variables
 - `WARP_SKIP_COMMON_SKILLS_INSTALL=1`: skip installation.
-- `WARP_COMMON_SKILLS_INSTALL_TARGET=project|global`: default install or removal target.
+- `WARP_COMMON_SKILLS_INSTALL_TARGET=project|global`: explicit install or removal target.
 - `WARP_COMMON_SKILLS_TARGET_REPO_ROOT=/path/to/repo`: repository containing `skills-lock.json` and project-local `.agents/skills`.
 ## Lock hash stamps
 After a successful install, `install_common_skills` writes a stamp with the current `skills-lock.json` hash.

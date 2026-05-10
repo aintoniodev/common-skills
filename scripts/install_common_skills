@@ -123,7 +123,7 @@ Options:
   --global             Install into ~/.agents/skills for the current user.
   --if-needed          Skip installation when the local stamp matches skills-lock.json.
   --prompt-for-target  Prompt for project/global before installing or updating when no target is explicit.
-  --non-interactive    Do not prompt; use the detected or default install target.
+  --non-interactive    Do not prompt; fail when no install target is explicit.
   --force              Install even if the local stamp is already up to date.
   --quiet              Suppress "already up to date" informational output.
   --verify-only        Verify common skills without installing or updating them.
@@ -134,8 +134,8 @@ Environment:
       Skip installing common agent skills.
   WARP_COMMON_SKILLS_INSTALL_TARGET=project|global
       Choose the install target when no explicit --project/--global flag is provided.
-      If omitted, reuse an existing common-skills install target when exactly one
-      exists, and prompt with global as the recommended default when neither target exists.
+      If omitted in an interactive invocation, prompt with global as the
+      recommended default. If omitted in a non-interactive invocation, fail.
   WARP_COMMON_SKILLS_TARGET_REPO_ROOT=/path/to/repo
       Repository containing skills-lock.json and project-local .agents/skills.
 EOF
@@ -155,6 +155,9 @@ common_skills_present_in_project() {
 
 common_skills_present_in_global() {
   local name=""
+  if [[ -f "$(global_stamp_file)" ]]; then
+    return 0
+  fi
 
   while IFS= read -r name; do
     if [[ -f "${HOME}/.agents/skills/${name}/SKILL.md" ]]; then
@@ -170,7 +173,8 @@ prompt_common_skills_target() {
   local reply=""
   local target=""
   if [[ "${NON_INTERACTIVE}" -eq 1 ]]; then
-    echo "${default_target}"
+    echo "error: common skills install target is required in non-interactive mode; pass --project, --global, or set WARP_COMMON_SKILLS_INSTALL_TARGET=project|global." >&2
+    return 1
   elif [[ -r /dev/tty && -w /dev/tty ]]; then
     echo "Where should common agent skills be installed?" > /dev/tty
     if [[ "${default_target}" = "global" ]]; then
@@ -190,33 +194,13 @@ prompt_common_skills_target() {
     if target="$(normalize_common_skills_target "${reply}")"; then
       echo "${target}"
     else
-      echo "Unrecognized install target '${reply}', defaulting to ${default_target}." > /dev/tty
-      echo "${default_target}"
+      echo "error: unrecognized install target '${reply}'." >&2
+      return 1
     fi
   else
-    echo "${default_target}"
+    echo "error: common skills install target is required when no interactive prompt is available; pass --project, --global, or set WARP_COMMON_SKILLS_INSTALL_TARGET=project|global." >&2
+    return 1
   fi
-}
-
-target_is_current() {
-  local target="$1"
-  local original_target="${TARGET}"
-  local target_stamp_file=""
-  local target_stamp_hash=""
-  local current_lock_hash=""
-
-  TARGET="${target}"
-  target_stamp_file="$(stamp_file)"
-  target_stamp_hash="$(stamp_hash "${target_stamp_file}")"
-  current_lock_hash="$(lock_hash)"
-
-  if [[ "${target_stamp_hash}" = "${current_lock_hash}" ]] && locked_skills_installed; then
-    TARGET="${original_target}"
-    return 0
-  fi
-
-  TARGET="${original_target}"
-  return 1
 }
 
 resolve_common_skills_target() {
@@ -259,25 +243,7 @@ resolve_common_skills_target() {
     return
   fi
   if [[ "${PROMPT_FOR_TARGET}" -eq 1 ]]; then
-    if [[ "${IF_NEEDED}" -eq 1 && -f "${LOCK_FILE}" ]]; then
-      if [[ "${project_present}" -eq 1 && "${global_present}" -eq 0 ]] && target_is_current "project"; then
-        echo "project"
-        return
-      fi
-
-      if [[ "${global_present}" -eq 1 && "${project_present}" -eq 0 ]] && target_is_current "global"; then
-        echo "global"
-        return
-      fi
-    fi
-
-    if [[ "${global_present}" -eq 1 ]]; then
-      target="$(prompt_common_skills_target "global")"
-    elif [[ "${project_present}" -eq 1 ]]; then
-      target="$(prompt_common_skills_target "project")"
-    else
-      target="$(prompt_common_skills_target "global")"
-    fi
+    target="$(prompt_common_skills_target "global")"
 
     if [[ "${target}" = "project" && "${global_present}" -eq 1 ]]; then
       echo "Common agent skills are already installed globally in ~/.agents/skills." >&2
@@ -294,18 +260,12 @@ resolve_common_skills_target() {
     echo "${target}"
     return
   fi
-
-  if [[ "${project_present}" -eq 1 ]]; then
-    echo "project"
-    return
+  if [[ "${NON_INTERACTIVE}" -eq 1 ]]; then
+    echo "error: common skills install target is required in non-interactive mode; pass --project, --global, or set WARP_COMMON_SKILLS_INSTALL_TARGET=project|global." >&2
+    return 1
   fi
 
-  if [[ "${global_present}" -eq 1 ]]; then
-    echo "global"
-    return
-  fi
-
-  prompt_common_skills_target
+  prompt_common_skills_target "global"
 }
 
 log() {
@@ -417,13 +377,41 @@ install_from_lock() {
   fi
 }
 
+fail_if_global_lock_mismatch() {
+  local target_stamp_file=""
+  local target_stamp_hash=""
+  local current_lock_hash=""
+
+  if [[ "${TARGET}" != "global" ]]; then
+    if [[ -n "${TARGET}" ]] || [[ ! -f "$(global_stamp_file)" ]]; then
+      return 0
+    fi
+  fi
+
+  target_stamp_file="$(global_stamp_file)"
+  target_stamp_hash="$(stamp_hash "${target_stamp_file}")"
+  if [[ -z "${target_stamp_hash}" ]]; then
+    return 0
+  fi
+
+  current_lock_hash="$(lock_hash)"
+  if [[ "${target_stamp_hash}" = "${current_lock_hash}" ]]; then
+    return 0
+  fi
+
+  echo "error: global common skills are pinned to a different skills-lock.json than ${LOCK_FILE}." >&2
+  echo "Another checkout may depend on the currently installed global common-skills version." >&2
+  echo "Explicitly reconcile the checkouts, update them to the same lock, or remove and reinstall the global common skills with scripts/remove_common_skills --repo-root ${REPO_ROOT} --global." >&2
+  exit 1
+}
+
 verify_common_skills() {
   if [[ ! -f "${LOCK_FILE}" ]]; then
     echo "error: missing skills lock file: ${LOCK_FILE}" >&2
     exit 1
   fi
 
-  node - "${LOCK_FILE}" "${REPO_ROOT}" "${HOME}" "${TARGET}" "${QUIET}" <<'NODE'
+  node - "${LOCK_FILE}" "${REPO_ROOT}" "${HOME}" "${TARGET}" "${QUIET}" "$(global_stamp_file)" <<'NODE'
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
@@ -433,6 +421,7 @@ const repoRoot = process.argv[3];
 const home = process.argv[4];
 let target = process.argv[5];
 const quiet = process.argv[6] === "1";
+const globalStampFile = process.argv[7];
 
 function fail(messages) {
   for (const message of messages) {
@@ -537,7 +526,7 @@ function verifyTarget(skills, installTarget) {
 
 const skills = lockedSkills();
 const projectPresent = containsLockedSkill(skills, "project");
-const globalPresent = containsLockedSkill(skills, "global");
+const globalPresent = fs.existsSync(globalStampFile) || containsLockedSkill(skills, "global");
 
 if (projectPresent && globalPresent) {
   fail([
@@ -645,16 +634,25 @@ if [[ "${VERIFY_ONLY}" -eq 1 && ! -f "${LOCK_FILE}" ]]; then
   verify_common_skills
   exit 1
 fi
+if [[ "${VERIFY_ONLY}" -eq 1 ]]; then
+  if [[ -n "${TARGET}" ]]; then
+    if ! RESOLVED_TARGET="$(normalize_common_skills_target "${TARGET}")"; then
+      echo "error: invalid common skills verification target: ${TARGET} (expected project or global)" >&2
+      exit 1
+    fi
+    TARGET="${RESOLVED_TARGET}"
+  fi
+
+  fail_if_global_lock_mismatch
+  verify_common_skills
+  exit 0
+fi
 if ! RESOLVED_TARGET="$(resolve_common_skills_target)"; then
   echo "error: could not resolve common skills install target" >&2
   usage >&2
   exit 1
 fi
 TARGET="${RESOLVED_TARGET}"
-if [[ "${VERIFY_ONLY}" -eq 1 ]]; then
-  verify_common_skills
-  exit 0
-fi
 if [[ ! -f "${LOCK_FILE}" ]]; then
   echo "Creating skills-lock.json from ${COMMON_SKILLS_SOURCE}."
   install_project_from_source
@@ -662,6 +660,8 @@ if [[ ! -f "${LOCK_FILE}" ]]; then
     echo "error: expected ${LOCK_FILE} to be created by skills add" >&2
     exit 1
   fi
+  LOCK_HASH="$(lock_hash)"
+  fail_if_global_lock_mismatch
 
   if [[ "${TARGET}" = "global" ]]; then
     install_global_from_lock
@@ -679,6 +679,7 @@ fi
 LOCK_HASH="$(lock_hash)"
 STAMP_FILE="$(stamp_file)"
 STAMP_HASH="$(stamp_hash "${STAMP_FILE}")"
+fail_if_global_lock_mismatch
 
 if [[ "${FORCE}" -ne 1 && "${IF_NEEDED}" -eq 1 && "${STAMP_HASH}" = "${LOCK_HASH}" ]] && locked_skills_installed; then
   log "Common skills are already up to date."
