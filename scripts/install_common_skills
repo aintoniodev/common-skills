@@ -7,6 +7,8 @@ LOCK_FILE=""
 STAMP_RELATIVE_PATH="warp/common-skills-lock.hash"
 SKILLS_CLI_VERSION="1.5.6"
 COMMON_SKILLS_SOURCE="warpdotdev/common-skills"
+COMMON_SKILLS_REF="${WARP_COMMON_SKILLS_REF:-}"
+COMMON_SKILLS_REQUEST_SOURCE="${COMMON_SKILLS_SOURCE}"
 SKILLS_CLI_AGENT="warp"
 COMMON_SKILL_SELECTOR="*"
 
@@ -20,6 +22,10 @@ TARGET="${WARP_COMMON_SKILLS_INSTALL_TARGET:-}"
 RESOLVED_TARGET=""
 ALLOW_GLOBAL_LOCK_UPDATE=0
 UPDATED_LOCK_CANDIDATE=""
+
+if [[ -n "${COMMON_SKILLS_REF}" ]]; then
+  COMMON_SKILLS_REQUEST_SOURCE="${COMMON_SKILLS_SOURCE}#${COMMON_SKILLS_REF}"
+fi
 
 resolve_repo_root() {
   cd "$1" && pwd
@@ -122,6 +128,19 @@ for (const skill of Object.values(lock.skills || {})) {
 ' "${LOCK_FILE}"
 }
 
+locked_common_skills_source() {
+  node -e '
+const fs = require("fs");
+const lock = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const skill = Object.values(lock.skills || {})[0];
+if (!skill) {
+  process.exit(1);
+}
+const source = skill.ref ? `${skill.source}#${skill.ref}` : skill.source;
+console.log(source);
+' "${LOCK_FILE}"
+}
+
 target_description() {
   if [[ "${TARGET}" = "global" ]]; then
     echo "~/.agents/skills"
@@ -158,6 +177,9 @@ Environment:
       recommended default. If omitted in a non-interactive invocation, fail.
   WARP_COMMON_SKILLS_TARGET_REPO_ROOT=/path/to/repo
       Repository containing skills-lock.json and project-local .agents/skills.
+  WARP_COMMON_SKILLS_REF=<git-ref>
+      Use a branch, tag, or commit from warpdotdev/common-skills when creating
+      a missing lock or checking interactively for upstream lock updates.
 EOF
 }
 
@@ -310,10 +332,10 @@ prepare_updated_lock_candidate() {
 
   if ! (
     cd "${temp_dir}"
-    npx --yes "skills@${SKILLS_CLI_VERSION}" update -p -y
+    npx --yes "skills@${SKILLS_CLI_VERSION}" add "${COMMON_SKILLS_REQUEST_SOURCE}" -a "${SKILLS_CLI_AGENT}" -s "${COMMON_SKILL_SELECTOR}" -y --copy
   ) > "${update_output}" 2>&1; then
     if [[ "${QUIET}" -ne 1 ]]; then
-      echo "warning: could not check for updated common skills from ${COMMON_SKILLS_SOURCE}; continuing with the existing skills-lock.json." >&2
+      echo "warning: could not check for updated common skills from ${COMMON_SKILLS_REQUEST_SOURCE}; continuing with the existing skills-lock.json." >&2
     fi
     rm -rf "${temp_dir}"
     return 1
@@ -353,7 +375,7 @@ maybe_prompt_for_upstream_lock_update() {
     return 0
   fi
 
-  echo "Common agent skills have been updated in ${COMMON_SKILLS_SOURCE}." > /dev/tty
+  echo "Common agent skills have been updated in ${COMMON_SKILLS_REQUEST_SOURCE}." > /dev/tty
   printf "Update ${LOCK_FILE} and reinstall common skills from the updated lock? [y/N]: " > /dev/tty
   read -r reply < /dev/tty
 
@@ -408,7 +430,7 @@ locked_skills_installed() {
 install_project_from_source() {
   (
     cd "${REPO_ROOT}"
-    npx --yes "skills@${SKILLS_CLI_VERSION}" add "${COMMON_SKILLS_SOURCE}" -a "${SKILLS_CLI_AGENT}" -s "${COMMON_SKILL_SELECTOR}" -y --copy
+    npx --yes "skills@${SKILLS_CLI_VERSION}" add "${COMMON_SKILLS_REQUEST_SOURCE}" -a "${SKILLS_CLI_AGENT}" -s "${COMMON_SKILL_SELECTOR}" -y --copy
   )
 }
 
@@ -422,6 +444,7 @@ install_project_from_lock() {
 install_global_from_lock() {
   local skill_names=()
   local name=""
+  local lock_source=""
 
   while IFS= read -r name; do
     skill_names+=("${name}")
@@ -432,9 +455,14 @@ install_global_from_lock() {
     exit 1
   fi
 
+  if ! lock_source="$(locked_common_skills_source)"; then
+    echo "error: no common-skills source found in ${LOCK_FILE}" >&2
+    exit 1
+  fi
+
   (
     cd "${REPO_ROOT}"
-    npx --yes "skills@${SKILLS_CLI_VERSION}" add "${COMMON_SKILLS_SOURCE}" -g -a "${SKILLS_CLI_AGENT}" -s "${skill_names[@]}" -y --copy
+    npx --yes "skills@${SKILLS_CLI_VERSION}" add "${lock_source}" -g -a "${SKILLS_CLI_AGENT}" -s "${skill_names[@]}" -y --copy
   )
 }
 
@@ -805,7 +833,7 @@ if ! RESOLVED_TARGET="$(resolve_common_skills_target)"; then
 fi
 TARGET="${RESOLVED_TARGET}"
 if [[ ! -f "${LOCK_FILE}" ]]; then
-  echo "Creating skills-lock.json from ${COMMON_SKILLS_SOURCE}."
+  echo "Creating skills-lock.json from ${COMMON_SKILLS_REQUEST_SOURCE}."
   install_project_from_source
   if [[ ! -f "${LOCK_FILE}" ]]; then
     echo "error: expected ${LOCK_FILE} to be created by skills add" >&2

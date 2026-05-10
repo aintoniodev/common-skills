@@ -26,8 +26,8 @@ scripts/remove_common_skills --project
 ```
 ## Install script
 `install_common_skills` installs common agent skills from `warpdotdev/common-skills`.
-When `skills-lock.json` is missing, the script creates it by running the `skills` CLI against the source repo and selecting all valid skills. This is intentionally dynamic: the script should not hardcode a fixed list of common skill names.
-When `skills-lock.json` already exists and the script is running interactively, it checks whether `warpdotdev/common-skills` would produce an updated lock before prompting for a project/global install target. If a different lock is available, it asks before updating `skills-lock.json` and reinstalling from the updated lock. Non-interactive and verify-only runs skip this upstream update prompt and use the existing lock.
+When `skills-lock.json` is missing, the script creates it by running the `skills` CLI against the source repo and selecting all valid skills. This is intentionally dynamic: the script should not hardcode a fixed list of common skill names. Set `WARP_COMMON_SKILLS_REF=<git-ref>` to create the lock from a branch, tag, or commit such as `warpdotdev/common-skills#my-branch`.
+When `skills-lock.json` already exists and the script is running interactively, it checks whether `warpdotdev/common-skills` would produce an updated lock before prompting for a project/global install target. If `WARP_COMMON_SKILLS_REF` is set, the check uses that branch, tag, or commit as the candidate source. If a different lock is available, it asks before updating `skills-lock.json` and reinstalling from the updated lock. Non-interactive and verify-only runs skip this upstream update prompt and use the existing lock.
 When `skills-lock.json` already exists, the script installs from the lock file:
 - Project target: `npx --yes skills@1.5.6 experimental_install`
 - Global target: `npx --yes skills@1.5.6 add warpdotdev/common-skills --global --agent warp --skill <locked skills> --yes --copy`
@@ -64,6 +64,7 @@ Verification fails if:
 - `WARP_SKIP_COMMON_SKILLS_INSTALL=1`: skip installation.
 - `WARP_COMMON_SKILLS_INSTALL_TARGET=project|global`: explicit install or removal target.
 - `WARP_COMMON_SKILLS_TARGET_REPO_ROOT=/path/to/repo`: repository containing `skills-lock.json` and project-local `.agents/skills`.
+- `WARP_COMMON_SKILLS_REF=<git-ref>`: use a specific `warpdotdev/common-skills` branch, tag, or commit when creating a missing lock or checking interactively for lock updates.
 ## Lock hash stamps
 After a successful install, `install_common_skills` writes a stamp with the current `skills-lock.json` hash.
 - Project installs use git path `warp/common-skills-lock.hash`, or `.agents/skills/.common-skills-lock.hash` when git metadata is unavailable.
