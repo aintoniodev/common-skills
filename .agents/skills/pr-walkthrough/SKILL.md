@@ -8,7 +8,7 @@ Create a local static HTML/CSS/JavaScript walkthrough that orients a reviewer to
 - **Data flow graph**: how state, data, events, requests, files, assets, or rendered output move through the changed system.
 - **Code dependency graph**: which changed components depend on each other, where the major seams are, and which files are entry points versus leaf dependencies.
 - **User action graph**: what the user does, what surface they interact with, and how that action flows through the implementation.
-This skill is an experiment in canvas-based PR comprehension. Do not reproduce the slideshow format. Do not put all perspectives on one graph. Generate four separate canvas views that the user can toggle between, and provide a guided tour within each view so the site teaches the PR from start to finish.
+This skill is an experiment in canvas-based PR comprehension. Do not reproduce the slideshow format. Do not put all perspectives on one graph. Generate four separate canvas views that the user can toggle between, and provide a guided tour within each view so the site teaches the PR from start to finish. Scale the walkthrough to the PR size: a small PR should feel like a compact reviewer aid, not a comprehensive architecture document.
 This skill is not a code-review skill. Do not generate new review findings, approve/request-changes recommendations, or exhaustive critique. Use the full codebase at the PR/head commit, the PR diff, PR description, specs changed by the PR, and existing review comments from humans or agents to produce orientation maps that help a reviewer understand the change quickly.
 ## Output
 Create a self-contained site at:
@@ -52,6 +52,12 @@ git --no-pager diff --name-status <base>...HEAD
 git --no-pager log --oneline <base>..HEAD
 git --no-pager diff <base>...HEAD
 ```
+Estimate PR size from changed lines, changed files, and conceptual breadth before building views. Default to the smallest useful walkthrough:
+- **Tiny PR**: roughly 1 changed file or under 75 changed lines. Use 2-3 nodes/cards per view, 1-2 tour steps per view, and omit screenshots/review-discussion nodes unless they materially clarify behavior.
+- **Small PR**: roughly under 250 changed lines or 1-3 changed files. Use 3-4 nodes/cards per view, 2-4 tour steps per view, and keep each node summary to 1 sentence plus at most 1 short detail.
+- **Medium PR**: roughly 250-800 changed lines or several related files. Use 4-7 nodes per view only when each node teaches a distinct concept.
+- **Large PR**: use the previous richer 5-12 node range only when the PR spans multiple subsystems, introduces new architecture, or has substantial review/spec context.
+Do not inflate a small PR to fill the canvas. If two nodes would teach the same reviewer fact, merge them. If a view would duplicate another view, make it intentionally sparse rather than adding filler.
 Do not build walkthrough content from the diff alone. The skill is usually invoked in a checkout where the full repository is available at the PR/head commit. Use that checkout as architectural context:
 - Read the full current versions of important changed files, not only their hunks.
 - Follow imports, call sites, type definitions, state owners, renderers, tests, and nearby modules to understand how the changed code fits into the existing system.
@@ -106,11 +112,11 @@ Before finalizing content, cross-check each important node against the actual so
 Each view needs a tour: a sequence of node IDs and explanatory text. The tour should guide the reviewer in a deliberate order. It should not merely select nodes in arbitrary file order.
 Directed graphs must make direction visually explicit. Data-flow, code-dependency, and user-action edges must render with arrowheads that visibly land at the target node boundary rather than disappearing underneath the node. Edge labels should describe the relationship direction from source to target. The system overview view should normally have zero edges; if an edge feels necessary, the view is probably drifting back into graph territory and should be simplified.
 Use these view roles:
-- **System overview view**: teach the architecture of the subsystem the PR happens to touch as a standalone code overview. Do not structure it as a PR change list, diff summary, implementation path, dependency graph, reviewer checklist, or comprehensive subsystem documentation. Do not attach PR diff links, changed-file annotations, review comments, PR screenshots, or spec/issue intent to this view. Prefer 4-7 stable component concepts such as user-facing surfaces, state owners, command/action boundaries, layout/rendering pipelines, validation layers, and test harnesses. Each card should be visually larger than graph nodes and should expose a full paragraph in the canvas, not just a short label. The paragraph should define the component and why it matters for orientation, while staying strictly limited to the context needed for a reviewer to get their bearings before reviewing the PR. Card titles, summaries, details, and tour steps should describe how the system works in general and should remain true outside this PR. Set card dimensions explicitly when useful, for example `width: 360`, `height: 220`, and `summaryLines: 7`.
+- **System overview view**: teach the architecture of the subsystem the PR happens to touch as a standalone code overview. Do not structure it as a PR change list, diff summary, implementation path, dependency graph, reviewer checklist, or comprehensive subsystem documentation. Do not attach PR diff links, changed-file annotations, review comments, PR screenshots, or spec/issue intent to this view. For small PRs, prefer 2-3 stable component concepts; for larger PRs, use up to 4-7 only when every card is necessary. Each card should be visually larger than graph nodes and should expose a short paragraph in the canvas, not just a label. The paragraph should define the component and why it matters for orientation, while staying strictly limited to the context needed for a reviewer to get their bearings before reviewing the PR. Card titles, summaries, details, and tour steps should describe how the system works in general and should remain true outside this PR. Set card dimensions explicitly when useful, for example `width: 340`, `height: 180`, and `summaryLines: 5` for concise cards.
 - **Data flow graph**: emphasize how information or state moves. Start with intent/spec input, then source/defaults/state, then layout/render output, then async asset or validation loops.
 - **Code dependency graph**: emphasize ownership and dependency direction. Start with specs/entry points, then model/view/command seams, then editor rendering elements, then tests.
 - **User action graph**: emphasize the user path. Start with the surface, then the action, then visible feedback and error/loading states.
-A useful non-overview graph usually has 5-12 nodes. It is okay for the same conceptual point to appear in multiple graphs with graph-specific coordinates and graph-specific explanatory text.
+A useful non-overview graph usually has 3-5 nodes for small PRs and 5-12 nodes only for larger PRs. It is okay for the same conceptual point to appear in multiple graphs with graph-specific coordinates and graph-specific explanatory text, but avoid repeating the same explanation across views.
 ### 5. Create the canvas data model
 Store graph data inline in the HTML as JSON assigned to `window.PR_WALKTHROUGH_D3_DATA`. Do not load JSON with `fetch()`.
 Use this shape:
@@ -168,6 +174,7 @@ Coordinate and scale guidance:
 - Keep related nodes close enough that the tour step and edges are visually obvious.
 - Keep lower-level dependencies farther right/down from their callers.
 - For the system overview view, change the scale from graph nodes to expanded reference cards. Use fewer cards, larger card dimensions, paragraph-length summaries, and a simple readable layout. Place peer architectural components in a compact reference map around the central subsystem concept, not around the PR intent. Do not include PR evidence, changed-file links, review comments, screenshots, specs, or PR-specific nodes in this view. Prefer `edges: []`.
+- For small PRs, keep graph coordinates compact enough that each view is readable without panning. Prefer a short left-to-right chain over a broad map.
 ### 6. Build the static site
 The site must work for both humans and browser automation agents.
 Required UI behavior:
@@ -203,6 +210,7 @@ Required content behavior:
 - PR-changed specs must be represented as nodes or node attachments. If the PR changes no specs, include an explicit "No PR-changed specs found" node or note.
 - Existing human and agent review comments must be attached to relevant nodes or summarized in a review-discussion node.
 - Visual artifacts should appear as node attachments in the detail panel.
+- For tiny and small PRs, represent missing specs, review discussion, and visuals as terse detail-panel notes on an existing node instead of standalone nodes, unless they materially change how the reviewer should read the PR.
 - Use Brandalf-aligned Warp styling: dark `#121212` surfaces, off-white text, Matter/Matter Mono typography, pink active accents, and graph colors from the brand palette.
 Use helper output:
 ```bash
@@ -233,6 +241,7 @@ Do not report the walkthrough as ready if validation fails or cannot be performe
 ## Orientation heuristics
 When deciding what to highlight:
 - Emphasize the smallest set of points of interest reviewers need to understand the PR's purpose, design, architecture, and user impact.
+- Prefer fewer, better nodes. A 100-200 line PR should normally produce a compact walkthrough with about 10-16 total nodes/cards across all views, not 30+.
 - Use the full codebase at the PR/head commit as the source of architecture truth. Diffs show what changed, but existing code explains what the changed pieces mean. The system overview view should be based on codebase exploration, not on the diff.
 - For the system overview, stop after the reader has enough bearings to review the PR; do not include every subsystem touched indirectly or every implementation dependency.
 - Prefer nodes for concepts, subsystems, state owners, user surfaces, important specs, and review-discussion hotspots.
