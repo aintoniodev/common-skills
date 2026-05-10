@@ -641,6 +641,10 @@ if [[ "${WARP_SKIP_COMMON_SKILLS_INSTALL:-}" = "1" ]]; then
   log "Skipping common-skills install because WARP_SKIP_COMMON_SKILLS_INSTALL=1."
   exit 0
 fi
+if [[ "${VERIFY_ONLY}" -eq 1 && ! -f "${LOCK_FILE}" ]]; then
+  verify_common_skills
+  exit 1
+fi
 if ! RESOLVED_TARGET="$(resolve_common_skills_target)"; then
   echo "error: could not resolve common skills install target" >&2
   usage >&2
