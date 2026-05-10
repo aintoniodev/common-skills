@@ -5,7 +5,7 @@ description: Generate a static HTML walkthrough of the current branch's pull req
 
 # PR Walkthrough
 
-Create a local static HTML/CSS/JavaScript walkthrough that orients a reviewer to the current branch's pull request. The walkthrough should start with the big picture: what the PR is trying to accomplish, why it matters, how it is built, what the user impact is, and where the important risks or open review discussions are. Then guide the reviewer only through the components that most improve comprehension for this particular change, with optional drill-down into important implementation details.
+Create a local static HTML/CSS/JavaScript walkthrough that orients a reviewer to the current branch's pull request. The walkthrough should start with the big picture: what the PR is trying to accomplish, why it matters, how it is built, what the user impact is, and where the important risks or open review discussions are. Then guide the reviewer only through the components that most improve comprehension for this particular change, with optional drill-down into important implementation details. The generated site should look and sound like a Warp-branded internal engineering artifact, not a generic slide deck.
 
 This skill is not a code-review skill. Do not generate new review findings, approve/request-changes recommendations, or exhaustive critique. Instead, use the PR diff, PR description, specs changed by the PR, and existing review comments from humans or agents to produce an orientation document/map that helps a reviewer understand the change quickly.
 
@@ -22,6 +22,52 @@ Prefer one self-contained HTML file with inline CSS, inline JavaScript, and inli
 The walkthrough may include generated diagrams and visual artifacts when they improve reviewer comprehension. Mermaid diagrams are allowed because they can be rendered with pure JavaScript in the browser. It is acceptable to load Mermaid from a CDN for this purpose, but only from a pinned official Mermaid release, such as the official Mermaid npm package served by a reputable CDN. Do not use unpinned `latest` URLs or unofficial builds. Prefer a pinned version URL, and include a graceful fallback: if CDN loading fails, show the Mermaid source in a styled code block or use a pre-rendered/local SVG when available.
 
 For reusable deterministic Mermaid rendering, prefer the helper script at `scripts/mermaid_runtime.py`. It emits semantic Mermaid figures, fallback CSS, an inline runtime loader that defines the renderer before injecting the pinned CDN script, and a reusable lightbox/scroll-container treatment for diagrams that render too small in-slide. Do not put a Mermaid `<script src=... onload=...>` tag in the document `<head>` that calls an initializer defined later in the body; that ordering can fail on fast loads and leave only the fallback source visible.
+Mermaid diagrams must be treated as generated code that requires validation. Before reporting that a walkthrough is ready, render-test every Mermaid diagram in the generated HTML. If any diagram renders a Mermaid syntax/error SVG, fails to produce an SVG, leaves only fallback source visible, or cannot be render-tested in the available environment, debug or rewrite the diagram and rerun validation before saying the walkthrough is ready. If a browser-capable environment is genuinely unavailable, report Mermaid rendering as unverified instead of ready.
+Do not show repeated Mermaid implementation disclaimers in the walkthrough UI, such as "Rendered with pinned Mermaid CDN" or "source remains visible if rendering fails." Keep those details in validation logs or the final caveats only when relevant. In the walkthrough itself, caption diagrams with the concept they explain.
+
+## Brand styling
+
+Use the `brandalf` skill when generating or revising walkthrough visual design. Brandalf points to the hosted Warp brand source of truth; fetch and apply it before writing the HTML/CSS for the walkthrough. If the hosted brand source is unavailable, proceed with the fallback tokens below and report the caveat in the final response.
+
+Apply these Brandalf-derived defaults unless the fetched brand source says otherwise:
+
+- Use a Warp dark surface: `#121212` for the page background, `#1e1e1d`/`#292929` for panels, and `#faf9f6` or `#ffffff` for text.
+- Use Warp pink accent `#a43787` intentionally for active states, key links, focus rings, and high-emphasis labels. Use secondary green `#34895c`, blue `#2e5d9e`, or purple `#754dac` sparingly for semantic badges and diagrams.
+- Use Matter for UI/body text with `DM Sans, system-ui, sans-serif` fallback. Use Matter Mono for code, metadata, caps labels, slide counters, and machine-oriented snippets with `Roboto Mono, ui-monospace, monospace` fallback.
+- Keep copy truth-seeking, technical, concise, and verifiable. Avoid marketing superlatives and generic buzzwords.
+- Prefer sharp, documentation-like containers with subtle borders. Use rounded corners only where they improve readability for cards, code excerpts, figures, and buttons.
+- Keep body copy around 50-75 characters per line when possible. Use large, direct slide titles and compact mono labels for slide categories.
+
+### Brand CSS starter
+
+Use this as the baseline and adapt it to the walkthrough content:
+
+```css
+:root {
+  --warp-bg: #121212;
+  --warp-panel: #1e1e1d;
+  --warp-panel-2: #292929;
+  --warp-border: #404040;
+  --warp-text: #faf9f6;
+  --warp-muted: #b4b4b2;
+  --warp-accent: #a43787;
+  --warp-green: #34895c;
+  --warp-blue: #2e5d9e;
+  --warp-purple: #754dac;
+  --warp-font-sans: 'Matter', 'DM Sans', system-ui, sans-serif;
+  --warp-font-mono: 'Matter Mono', 'Roboto Mono', ui-monospace, monospace;
+}
+body {
+  background: var(--warp-bg);
+  color: var(--warp-text);
+  font-family: var(--warp-font-sans);
+}
+.mono-label {
+  font-family: var(--warp-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+```
 
 ## Workflow
 
@@ -217,6 +263,13 @@ python3 .agents/skills/pr-walkthrough/scripts/mermaid_runtime.py --figure --capt
 The helper's `--figure` output includes an `Open diagram` control. The helper's `--runtime` output binds those controls to a modal lightbox and clones the rendered SVG into a large scrollable viewport. Use this helper rather than writing one-off lightbox JavaScript in each generated walkthrough.
 
 If runtime rendering is used, define the Mermaid initialization function before loading Mermaid. The helper's runtime script does this by injecting the pinned CDN script after the DOM is ready, then calling `mermaid.run({ nodes })`. Runtime rendering may use inline/local Mermaid JavaScript or a pinned official Mermaid CDN release. If using a CDN, use a concrete versioned URL rather than `latest`, label it as an external runtime dependency, and keep Mermaid source or local SVG fallback content available when rendering fails. If pre-rendered SVG is used, keep the original Mermaid source nearby in a collapsible details block when it helps future edits.
+Validate Mermaid rendering with the reusable helper before declaring the walkthrough ready:
+
+```bash
+python3 .agents/skills/pr-walkthrough/scripts/validate_mermaid_rendering.py --html .warp/pr-walkthrough/index.html --require-browser
+```
+
+This helper extracts Mermaid sources from the generated HTML, performs static linting for common syntax mistakes, opens the local `file://` page with Playwright when available, and fails if any Mermaid figure is marked failed, renders Mermaid error text, or does not produce an SVG. Use the failure output to identify and simplify or rewrite the diagram source, then regenerate and rerun the validator. Do not surface this validation machinery as repeated copy inside the walkthrough.
 
 For screenshots and mocks, use semantic figures:
 
@@ -234,8 +287,9 @@ Use a clean reviewer-focused layout:
 - Compact badges for file types such as route, UI, API, model, helper, test, migration, spec, or docs.
 - A dependency tree or graph-like list that makes the high-level-to-leaf flow obvious.
 - Visual slides or sidebars for screenshots, mocks, generated Mermaid diagrams, and before/after states when those visuals reduce the amount of prose required.
+- Brandalf-aligned Warp styling: dark `#121212` surfaces, off-white text, Matter/Matter Mono typography, pink `#a43787` accent, concise technical labels, and deterministic fallback states.
 
-The goal is clarity for review, not a polished marketing page.
+The goal is clarity for review with a recognizably Warp-branded execution, not a polished marketing page.
 
 ### 9. Validate the walkthrough
 
@@ -250,9 +304,10 @@ Before finishing:
 7. Confirm existing PR review comments were fetched and either surfaced contextually or explicitly reported as absent/unavailable.
 8. Confirm the walkthrough starts with a big-picture overview and then explains the existing architecture around the touched components before any PR-specific deep dive.
 9. Confirm the architecture primer includes drill-down links for the major components it names.
-10. Confirm generated Mermaid diagrams render correctly. If using a CDN, confirm it points to a pinned official Mermaid release, that the Mermaid initializer is defined before the CDN script is loaded, and that fallback Mermaid source or local SVG content is displayed when runtime rendering is unavailable. Prefer validating markup generated by `scripts/mermaid_runtime.py`, including that each Mermaid figure has an `Open diagram` lightbox control and that the lightbox opens a scrollable, readable version of the diagram.
+10. Confirm generated Mermaid diagrams render correctly by running `scripts/validate_mermaid_rendering.py` against the generated HTML. If using a CDN, confirm it points to a pinned official Mermaid release, that the Mermaid initializer is defined before the CDN script is loaded, and that fallback Mermaid source or local SVG content is displayed when runtime rendering is unavailable. Prefer validating markup generated by `scripts/mermaid_runtime.py`, including that each Mermaid figure has an `Open diagram` lightbox control and that the lightbox opens a scrollable, readable version of the diagram. Do not report the walkthrough as ready if Mermaid validation fails or cannot be performed in a browser-capable environment; rewrite the diagram or report rendering as unverified.
 11. Confirm screenshots, mocks, Figma exports, changed images, and video thumbnails referenced by the walkthrough are local relative assets or data URIs, not remote hotlinks.
-12. Spot-check at least one file-level GitHub diff link and one line-specific GitHub diff link in the browser when practical.
+12. Confirm the site uses Brandalf/Warp styling: dark Warp surface, off-white text, pink accent, Matter/Matter Mono font stacks, concise technical labels, and no generic unbranded theme defaults.
+13. Spot-check at least one file-level GitHub diff link and one line-specific GitHub diff link in the browser when practical.
 
 If a browser or computer-use agent is available, use it to open the file and click or key through enough slides to verify screenshot readiness.
 

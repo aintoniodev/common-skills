@@ -38,7 +38,6 @@ def mermaid_figure(source: str, caption: str, figure_id: str | None = None) -> s
         <figure class="visual-artifact mermaid-artifact" data-source="generated" id="{figure_id}">
           <figcaption>
             {escaped_caption}
-            <span class="external-note">Rendered with pinned Mermaid CDN: mermaid@{MERMAID_VERSION}; source remains visible if rendering fails.</span>
           </figcaption>
           <div class="mermaid-actions">
             <button class="mermaid-open-lightbox" type="button">Open diagram</button>
@@ -63,7 +62,6 @@ def mermaid_css() -> str:
         .mermaid-fallback { white-space: pre-wrap; color: #dbeafe; background: #0a0f16; border-radius: 10px; }
         .mermaid-artifact.mermaid-rendered .mermaid-fallback { display: none; }
         .mermaid-artifact.mermaid-failed .mermaid-fallback { display: block; }
-        .external-note { display: block; color: var(--muted, #6b7280); font-size: 12px; margin-top: 4px; }
         .mermaid-actions { display: flex; justify-content: flex-end; margin: 10px 0; }
         .mermaid-open-lightbox, .mermaid-lightbox-close { border: 1px solid var(--border, #303946); background: var(--panel2, #1f2630); color: var(--text, #e6edf3); border-radius: 10px; padding: 8px 12px; cursor: pointer; font: inherit; }
         .mermaid-open-lightbox:hover, .mermaid-lightbox-close:hover { filter: brightness(1.15); }
@@ -178,8 +176,68 @@ def mermaid_runtime_script() -> str:
             console.warn('Mermaid render unavailable; source fallback remains visible.', error || 'unknown error');
             document.querySelectorAll('.mermaid-artifact').forEach((figure) => {{
               figure.classList.add('mermaid-failed');
+              figure.classList.remove('mermaid-rendered');
+              figure.dataset.mermaidError = formatMermaidError(error || 'unknown error');
             }});
+            document.body.classList.add('mermaid-has-errors');
             setupMermaidLightboxes();
+          }}
+
+          function renderedNodeHasError(node) {{
+            const text = node.textContent || '';
+            return /Syntax error|Parse error|Lexical error|mermaid version/i.test(text);
+          }}
+
+          function formatMermaidError(error) {{
+            if (!error) {{
+              return 'unknown error';
+            }}
+            if (typeof error === 'string') {{
+              return error;
+            }}
+            if (error.str) {{
+              return error.str;
+            }}
+            if (error.message) {{
+              return error.message;
+            }}
+            try {{
+              return JSON.stringify(error);
+            }} catch (_) {{
+              return String(error);
+            }}
+          }}
+
+          function markNodeFailed(node, error) {{
+            const figure = node.closest('.mermaid-artifact');
+            if (!figure) {{
+              return;
+            }}
+            figure.classList.add('mermaid-failed');
+            figure.classList.remove('mermaid-rendered');
+            figure.dataset.mermaidError = formatMermaidError(error || 'Mermaid did not produce a valid SVG');
+          }}
+
+          function mermaidSourceForNode(node) {{
+            const figure = node.closest('.mermaid-artifact');
+            const fallback = figure?.querySelector('.mermaid-fallback');
+            return (fallback?.textContent || node.textContent || '').trim();
+          }}
+
+          async function renderOneMermaidNode(node, index) {{
+            const source = mermaidSourceForNode(node);
+            if (!source) {{
+              throw new Error('Mermaid source is empty');
+            }}
+            const renderId = `pr_walkthrough_mermaid_${{index}}_${{Date.now()}}`;
+            const rendered = await window.mermaid.render(renderId, source);
+            if (!rendered?.svg || /Syntax error|Parse error|Lexical error|mermaid version/i.test(rendered.svg)) {{
+              throw new Error('Mermaid did not produce a valid SVG');
+            }}
+            node.innerHTML = rendered.svg;
+            if (typeof rendered.bindFunctions === 'function') {{
+              rendered.bindFunctions(node);
+            }}
           }}
 
           async function renderMermaidDiagrams() {{
@@ -198,16 +256,36 @@ def mermaid_runtime_script() -> str:
                 if (nodes.length === 0) {{
                   return;
                 }}
-                await window.mermaid.run({{ nodes }});
-                nodes.forEach((node) => {{
+                let failedCount = 0;
+                for (const [index, node] of nodes.entries()) {{
                   const figure = node.closest('.mermaid-artifact');
-                  if (figure) {{
+                  if (!figure) {{
+                    continue;
+                  }}
+                  try {{
+                    await renderOneMermaidNode(node, index + 1);
+                  }} catch (error) {{
+                    failedCount += 1;
+                    markNodeFailed(node, error);
+                    continue;
+                  }}
+                  if (node.querySelector('svg') && !renderedNodeHasError(node)) {{
                     figure.classList.add('mermaid-rendered');
                     figure.classList.remove('mermaid-failed');
+                    delete figure.dataset.mermaidError;
+                  }} else {{
+                    failedCount += 1;
+                    markNodeFailed(node, 'Mermaid did not produce a valid SVG');
                   }}
-                }});
+                }}
                 setupMermaidLightboxes();
-                document.body.classList.add('mermaid-ready');
+                if (failedCount > 0) {{
+                  document.body.classList.add('mermaid-has-errors');
+                  console.warn(`${{failedCount}} Mermaid diagram(s) failed to render; source fallback remains visible.`);
+                }} else {{
+                  document.body.classList.add('mermaid-ready');
+                  document.body.classList.remove('mermaid-has-errors');
+                }}
               }} catch (error) {{
                 markFailed(error);
               }}
