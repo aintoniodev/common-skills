@@ -15,7 +15,7 @@ DIRECTED_EDGE_GRAPHS = {"data-flow", "code-dependency", "user-action"}
 REQUIRED_CONTROLS = (
     "Fit to view",
     "Reset zoom",
-    "System overview graph",
+    "System overview",
     "Data flow graph",
     "Code dependency graph",
     "User action graph",

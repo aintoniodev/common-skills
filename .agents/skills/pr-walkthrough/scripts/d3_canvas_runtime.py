@@ -99,10 +99,10 @@ def d3_canvas_runtime_script() -> str:
           let selectedNodeId = null;
           let tourIndex = 0;
           const REQUIRED_GRAPH_IDS = ['system-overview', 'data-flow', 'code-dependency', 'user-action'];
-          const NODE_WIDTH = 220;
-          const NODE_HEIGHT = 116;
-          const NODE_HALF_WIDTH = NODE_WIDTH / 2;
-          const NODE_HALF_HEIGHT = NODE_HEIGHT / 2;
+          const DEFAULT_NODE_WIDTH = 220;
+          const DEFAULT_NODE_HEIGHT = 116;
+          const OVERVIEW_NODE_WIDTH = 360;
+          const OVERVIEW_NODE_HEIGHT = 220;
           let zoomBehavior = null;
           let svgSelection = null;
           let viewportSelection = null;
@@ -143,7 +143,7 @@ def d3_canvas_runtime_script() -> str:
             const card = document.querySelector('.d3-tour-card');
             if (card) card.dataset.tourIndex = String(tourIndex);
             if (label) label.textContent = `Step ${{Math.min(tourIndex + 1, (graph.tour || []).length)}} / ${{(graph.tour || []).length || 0}}`;
-            if (title) title.textContent = step?.title || graph.label || 'Graph tour';
+            if (title) title.textContent = step?.title || graph.label || 'View tour';
             if (body) body.textContent = step?.body || graph.summary || '';
           }}
 
@@ -160,21 +160,24 @@ def d3_canvas_runtime_script() -> str:
             const comments = Array.isArray(node.comments) ? node.comments : [];
             const links = Array.isArray(node.links) ? node.links : [];
             panel.innerHTML = `
-+              <span class="d3-detail-kind">${{escapeHtml(graph.label)}} · ${{escapeHtml(node.kind || 'point of interest')}}</span>
-+              <h2 class="d3-detail-title">${{escapeHtml(node.title)}}</h2>
-+              <p class="d3-detail-summary">${{escapeHtml(node.summary || '')}}</p>
-+              ${{step?.nodeId === node.id ? `<section class="d3-detail-section"><h3>Tour context</h3><ul class="d3-detail-list"><li>${{escapeHtml(step.body || '')}}</li></ul></section>` : ''}}
-+              <section class="d3-detail-section"><h3>Explanation</h3>${{details.length ? `<ul class="d3-detail-list">${{details.map((item) => `<li>${{escapeHtml(item)}}</li>`).join('')}}</ul>` : '<p class="d3-empty">No additional detail provided.</p>'}}</section>
-+              <section class="d3-detail-section"><h3>Changed files</h3>${{listItems(files, (file) => `<li><a class="d3-file-link" href="${{escapeHtml(file.url || '#')}}" target="_blank" rel="noreferrer">${{escapeHtml(file.path || file.label || 'file')}}</a>${{file.note ? `<p>${{escapeHtml(file.note)}}</p>` : ''}}</li>`)}}</section>
-+              <section class="d3-detail-section"><h3>Existing review discussion</h3>${{listItems(comments, (comment) => `<li><span class="d3-comment-author">${{escapeHtml(comment.author || 'reviewer')}}</span>${{escapeHtml(comment.body || '')}}${{comment.url ? `<br><a href="${{escapeHtml(comment.url)}}" target="_blank" rel="noreferrer">Open comment</a>` : ''}}</li>`)}}</section>
-+              <section class="d3-detail-section"><h3>Links</h3>${{listItems(links, (link) => `<li><a href="${{escapeHtml(link.url || '#')}}" target="_blank" rel="noreferrer">${{escapeHtml(link.label || link.url || 'link')}}</a></li>`)}}</section>
-+            `;
+              <span class="d3-detail-kind">${{escapeHtml(graph.label)}} · ${{escapeHtml(node.kind || 'point of interest')}}</span>
+              <h2 class="d3-detail-title">${{escapeHtml(node.title)}}</h2>
+              <p class="d3-detail-summary">${{escapeHtml(node.summary || '')}}</p>
+              ${{step?.nodeId === node.id ? `<section class="d3-detail-section"><h3>Tour context</h3><ul class="d3-detail-list"><li>${{escapeHtml(step.body || '')}}</li></ul></section>` : ''}}
+              <section class="d3-detail-section"><h3>Explanation</h3>${{details.length ? `<ul class="d3-detail-list">${{details.map((item) => `<li>${{escapeHtml(item)}}</li>`).join('')}}</ul>` : '<p class="d3-empty">No additional detail provided.</p>'}}</section>
+              <section class="d3-detail-section"><h3>Changed files</h3>${{listItems(files, (file) => `<li><a class="d3-file-link" href="${{escapeHtml(file.url || '#')}}" target="_blank" rel="noreferrer">${{escapeHtml(file.path || file.label || 'file')}}</a>${{file.note ? `<p>${{escapeHtml(file.note)}}</p>` : ''}}</li>`)}}</section>
+              <section class="d3-detail-section"><h3>Existing review discussion</h3>${{listItems(comments, (comment) => `<li><span class="d3-comment-author">${{escapeHtml(comment.author || 'reviewer')}}</span>${{escapeHtml(comment.body || '')}}${{comment.url ? `<br><a href="${{escapeHtml(comment.url)}}" target="_blank" rel="noreferrer">Open comment</a>` : ''}}</li>`)}}</section>
+              <section class="d3-detail-section"><h3>Links</h3>${{listItems(links, (link) => `<li><a href="${{escapeHtml(link.url || '#')}}" target="_blank" rel="noreferrer">${{escapeHtml(link.label || link.url || 'link')}}</a></li>`)}}</section>
+            `;
           }}
 
           function wrapText(selection, width, maxLines = 3) {{
             selection.each(function wrapEach() {{
               const text = window.d3.select(this);
-              const words = text.text().split(/\s+/).filter(Boolean);
+              const datum = text.datum();
+              const resolvedWidth = typeof width === 'function' ? Number(width(datum)) : Number(width);
+              const resolvedMaxLines = typeof maxLines === 'function' ? Number(maxLines(datum)) : Number(maxLines);
+              const words = text.text().split(new RegExp('\\\\s+')).filter(Boolean);
               const lineHeight = 15;
               const y = Number(text.attr('y') || 0);
               text.text('');
@@ -184,32 +187,36 @@ def d3_canvas_runtime_script() -> str:
               for (const word of words) {{
                 line.push(word);
                 tspan.text(line.join(' '));
-                if (tspan.node().getComputedTextLength() > width && line.length > 1) {{
+                if (tspan.node().getComputedTextLength() > resolvedWidth && line.length > 1) {{
                   line.pop();
                   tspan.text(line.join(' '));
                   line = [word];
                   lineNumber += 1;
-                  if (lineNumber >= maxLines) {{ tspan.text(`${{tspan.text()}}…`); break; }}
+                  if (lineNumber >= resolvedMaxLines) {{ tspan.text(`${{tspan.text()}}…`); break; }}
                   tspan = text.append('tspan').attr('x', text.attr('x')).attr('y', y + lineNumber * lineHeight).text(word);
                 }}
               }}
             }});
           }}
-
-          function nodeBoundaryPoint(from, to, padding) {{
+          function nodeWidth(node, graph) {{
+            return Number(node.width || (graph?.id === 'system-overview' ? OVERVIEW_NODE_WIDTH : DEFAULT_NODE_WIDTH));
+          }}
+          function nodeHeight(node, graph) {{
+            return Number(node.height || (graph?.id === 'system-overview' ? OVERVIEW_NODE_HEIGHT : DEFAULT_NODE_HEIGHT));
+          }}
+          function nodeBoundaryPoint(from, to, padding, graph) {{
             const dx = to.x - from.x;
             const dy = to.y - from.y;
             if (dx === 0 && dy === 0) return {{ x: from.x, y: from.y }};
-            const scale = 1 / Math.max(Math.abs(dx) / (NODE_HALF_WIDTH + padding), Math.abs(dy) / (NODE_HALF_HEIGHT + padding));
+            const scale = 1 / Math.max(Math.abs(dx) / (nodeWidth(from, graph) / 2 + padding), Math.abs(dy) / (nodeHeight(from, graph) / 2 + padding));
             return {{ x: from.x + dx * scale, y: from.y + dy * scale }};
           }}
-
-          function pathForEdge(edge, nodes) {{
+          function pathForEdge(edge, nodes, graph) {{
             const source = nodes.get(edge.source);
             const target = nodes.get(edge.target);
             if (!source || !target) return '';
-            const start = nodeBoundaryPoint(source, target, 10);
-            const end = nodeBoundaryPoint(target, source, 18);
+            const start = nodeBoundaryPoint(source, target, 10, graph);
+            const end = nodeBoundaryPoint(target, source, 18, graph);
             const dx = end.x - start.x;
             const control = Math.max(80, Math.abs(dx) * 0.42);
             return `M ${{start.x}} ${{start.y}} C ${{start.x + control}} ${{start.y}}, ${{end.x - control}} ${{end.y}}, ${{end.x}} ${{end.y}}`;
@@ -286,9 +293,9 @@ def d3_canvas_runtime_script() -> str:
             const edgeLayer = viewportSelection.append('g').attr('class', 'd3-edges');
             const nodeLayer = viewportSelection.append('g').attr('class', 'd3-nodes');
             const edges = edgeLayer.selectAll('.d3-edge').data(graph.edges || []).join('g').attr('class', 'd3-edge').attr('data-edge-id', (edge, index) => edge.id || `${{edge.source}}-${{edge.target}}-${{index}}`).style('--edge-color', graph.color || '#868584');
-            edges.append('path').attr('d', (edge) => pathForEdge(edge, nodesById)).attr('marker-end', `url(#d3-arrowhead-${{graph.id}})`);
+            edges.append('path').attr('d', (edge) => pathForEdge(edge, nodesById, graph)).attr('marker-end', `url(#d3-arrowhead-${{graph.id}})`);
             edges.append('text').append('textPath').attr('href', function href(_, index) {{ const path = window.d3.select(edges.nodes()[index]).select('path'); const id = `d3-edge-path-${{graph.id}}-${{index}}`; path.attr('id', id); return `#${{id}}`; }}).attr('startOffset', '50%').attr('text-anchor', 'middle').text((edge) => edge.label || '');
-            const nodes = nodeLayer.selectAll('.d3-node').data(graph.nodes || []).join('g').attr('class', 'd3-node').attr('data-node-id', (node) => node.id).attr('tabindex', 0).attr('role', 'button').attr('aria-label', (node) => node.title).attr('transform', (node) => `translate(${{node.x || 0}}, ${{node.y || 0}})`).style('--node-color', graph.color || '#a43787').on('click keydown', (event, node) => {{
+            const nodes = nodeLayer.selectAll('.d3-node').data(graph.nodes || []).join('g').attr('class', (node) => `d3-node${{graph.id === 'system-overview' ? ' is-overview-card' : ''}}`).attr('data-node-id', (node) => node.id).attr('tabindex', 0).attr('role', 'button').attr('aria-label', (node) => node.title).attr('transform', (node) => `translate(${{node.x || 0}}, ${{node.y || 0}})`).style('--node-color', graph.color || '#a43787').on('click keydown', (event, node) => {{
               if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
               selectedNodeId = node.id;
               const tourPosition = (graph.tour || []).findIndex((step) => step.nodeId === node.id);
@@ -297,10 +304,10 @@ def d3_canvas_runtime_script() -> str:
               renderDetails(node, graph);
               applyFilters(graph);
             }});
-            nodes.append('rect').attr('x', -110).attr('y', -58).attr('width', 220).attr('height', 116).attr('rx', 12);
-            nodes.append('text').attr('class', 'd3-node-kind').attr('x', -90).attr('y', -31).text((node) => node.kind || 'point');
-            nodes.append('text').attr('class', 'd3-node-title').attr('x', -90).attr('y', -7).text((node) => node.title || node.id).call(wrapText, 182, 2);
-            nodes.append('text').attr('class', 'd3-node-summary').attr('x', -90).attr('y', 30).text((node) => node.summary || '').call(wrapText, 182, 2);
+            nodes.append('rect').attr('x', (node) => -nodeWidth(node, graph) / 2).attr('y', (node) => -nodeHeight(node, graph) / 2).attr('width', (node) => nodeWidth(node, graph)).attr('height', (node) => nodeHeight(node, graph)).attr('rx', 12);
+            nodes.append('text').attr('class', 'd3-node-kind').attr('x', (node) => -nodeWidth(node, graph) / 2 + 20).attr('y', (node) => -nodeHeight(node, graph) / 2 + 27).text((node) => node.kind || 'point');
+            nodes.append('text').attr('class', 'd3-node-title').attr('x', (node) => -nodeWidth(node, graph) / 2 + 20).attr('y', (node) => -nodeHeight(node, graph) / 2 + 53).text((node) => node.title || node.id).call(wrapText, (node) => nodeWidth(node, graph) - 40, 2);
+            nodes.append('text').attr('class', 'd3-node-summary').attr('x', (node) => -nodeWidth(node, graph) / 2 + 20).attr('y', (node) => -nodeHeight(node, graph) / 2 + 96).text((node) => node.summary || '').call(wrapText, (node) => nodeWidth(node, graph) - 40, (node) => Number(node.summaryLines || (graph.id === 'system-overview' ? 7 : 2)));
             zoomBehavior = window.d3.zoom().scaleExtent([0.18, 3.5]).on('zoom', (event) => root.attr('transform', event.transform));
             svg.call(zoomBehavior);
             document.querySelectorAll('.d3-graph-toggle').forEach((button) => button.setAttribute('aria-pressed', button.dataset.graphId === graph.id ? 'true' : 'false'));
@@ -377,7 +384,7 @@ def d3_canvas_runtime_script() -> str:
         }})();
         </script>
         """
-    ).strip().replace('\n+              ', '\n              ')
+    ).strip()
 
 
 def graph_controls_markup(data: dict) -> str:
@@ -388,12 +395,12 @@ def graph_controls_markup(data: dict) -> str:
     return dedent(
         f"""
         <aside class="d3-control-panel" aria-label="Canvas controls">
-          <p class="d3-panel-title">Graph view</p>
+          <p class="d3-panel-title">View</p>
           <div class="d3-control-stack">{buttons}</div>
           <p class="d3-panel-title">Tour</p>
           <div class="d3-tour-card" aria-live="polite">
             <div class="d3-tour-step-label">Step 0 / 0</div>
-            <h2 class="d3-tour-title">Graph tour</h2>
+            <h2 class="d3-tour-title">View tour</h2>
             <p class="d3-tour-body">Use Next tour step to start.</p>
           </div>
           <div class="d3-control-stack">
@@ -435,7 +442,7 @@ def html_template(data: dict) -> str:
         <body>
           <main class="d3-walkthrough-shell">
             <header class="d3-walkthrough-header">
-              <div class="d3-kicker">Warp PR graph tour</div>
+              <div class="d3-kicker">Warp PR walkthrough</div>
               <h1>{html.escape(title)}</h1>
               <div class="d3-meta-row"><span>{html.escape(base)} ← {html.escape(head)}</span>{f'<a href="{html.escape(pr_url)}" target="_blank" rel="noreferrer">Open PR</a>' if pr_url else ''}</div>
               <p class="d3-summary">{html.escape(summary)}</p>
@@ -463,13 +470,13 @@ def sample_data() -> dict:
         "meta": {"title": "Sample PR D3 walkthrough", "prUrl": "", "baseRef": "master", "headRef": "feature", "summary": "Replace this sample graph with PR-specific guided graph tours."},
         "graphs": [
             {
-                "id": "system-overview", "label": "System overview graph", "color": "#c0872a", "summary": "Major touched components.",
+                "id": "system-overview", "label": "System overview", "color": "#c0872a", "summary": "Major touched components.",
                 "nodes": [
-                    {"id": "intent", "title": "Intent", "kind": "overview", "x": -260, "y": -80, "summary": "The PR intent.", "details": ["Start with what the PR changes."], "files": [], "comments": [], "links": []},
-                    {"id": "component", "title": "Component", "kind": "system", "x": 80, "y": 20, "summary": "A touched component.", "details": ["Explain what this component owns."], "files": [], "comments": [], "links": []},
+                    {"id": "surface", "title": "User-facing surface", "kind": "overview card", "x": -220, "y": -80, "width": 360, "height": 220, "summaryLines": 7, "summary": "Use a full paragraph here to define the surface, what code owns it, and why a reviewer needs that concept before reading the PR. Keep this scoped to orientation, not implementation deltas.", "details": ["Explain the stable component."], "files": [], "comments": [], "links": []},
+                    {"id": "component", "title": "State or action owner", "kind": "overview card", "x": 220, "y": -80, "width": 360, "height": 220, "summaryLines": 7, "summary": "Use another full paragraph for the next essential concept. If a concept is not needed to understand the review surface, leave it out of the system overview.", "details": ["Explain what this component owns."], "files": [], "comments": [], "links": []},
                 ],
                 "edges": [],
-                "tour": [{"nodeId": "intent", "title": "Start with intent", "body": "The overview graph begins with the product or architecture intent."}, {"nodeId": "component", "title": "Name the component", "body": "Then identify the major touched component."}],
+                "tour": [{"nodeId": "surface", "title": "Start with the surface", "body": "The system overview starts with the smallest useful orientation concept."}, {"nodeId": "component", "title": "Name the owner", "body": "Then identify the state or action owner a reviewer needs to know."}],
             },
             {
                 "id": "data-flow", "label": "Data flow graph", "color": "#34895c", "summary": "How state moves.",
