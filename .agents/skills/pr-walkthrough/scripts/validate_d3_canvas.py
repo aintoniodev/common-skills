@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate a generated pr-walkthrough-d3 multi-graph tour HTML canvas."""
+"""Validate a generated pr-walkthrough multi-graph tour HTML canvas."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ class DataScriptExtractor(HTMLParser):
         self.parts: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag == "script" and dict(attrs).get("id") == "pr-walkthrough-d3-data":
+        if tag == "script" and dict(attrs).get("id") == "pr-walkthrough-data":
             self.capture = True
             self.parts = []
 
@@ -69,8 +69,8 @@ def static_validate(html_text: str, data: dict) -> list[str]:
         errors.append("HTML uses an unpinned D3 `latest` runtime")
     if "fetch(" in html_text:
         errors.append("HTML uses fetch(); inline graph data is required for file:// usage")
-    if 'id="pr-walkthrough-d3-canvas"' not in html_text:
-        errors.append("Missing #pr-walkthrough-d3-canvas SVG")
+    if 'id="pr-walkthrough-canvas"' not in html_text:
+        errors.append("Missing #pr-walkthrough-canvas SVG")
     if "marker-end" not in html_text or "d3-arrowhead" not in html_text:
         errors.append("HTML does not include visible directed edge arrowhead rendering")
     for label in REQUIRED_CONTROLS:
@@ -156,7 +156,7 @@ def browser_validate(html_path: Path, timeout_ms: int) -> tuple[bool, str]:
                   nodes: document.querySelectorAll('.d3-node').length,
                   edges: document.querySelectorAll('.d3-edge').length,
                   arrows: document.querySelectorAll('.d3-edge path[marker-end]').length,
-                  detailHasContent: Boolean(document.querySelector('#pr-walkthrough-d3-details')?.textContent?.trim()),
+                  detailHasContent: Boolean(document.querySelector('#pr-walkthrough-details')?.textContent?.trim()),
                   tourText: document.querySelector('.d3-tour-step-label')?.textContent || '',
                   controls: Array.from(document.querySelectorAll('button')).map((button) => button.textContent.trim()),
                 })
@@ -210,8 +210,8 @@ def browser_validate(html_path: Path, timeout_ms: int) -> tuple[bool, str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate a pr-walkthrough-d3 generated HTML file.")
-    parser.add_argument("--html", required=True, type=Path, help="Path to .warp/pr-walkthrough-d3/index.html")
+    parser = argparse.ArgumentParser(description="Validate a pr-walkthrough generated HTML file.")
+    parser.add_argument("--html", required=True, type=Path, help="Path to .warp/pr-walkthrough/index.html")
     parser.add_argument("--require-browser", action="store_true", help="Fail if browser validation cannot be performed.")
     parser.add_argument("--timeout-ms", type=int, default=15000, help="Browser validation timeout.")
     args = parser.parse_args()

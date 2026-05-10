@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reusable D3 multi-graph tour helpers for the pr-walkthrough-d3 skill."""
+"""Reusable D3 multi-graph tour helpers for the pr-walkthrough skill."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ def d3_canvas_css() -> str:
         .d3-search:focus { border-color: var(--warp-accent); outline: none; }
         .d3-help { color: var(--warp-dim); font-family: var(--warp-font-mono); font-size: 11px; line-height: 1.5; }
         .d3-canvas-stage { min-height: 0; position: relative; overflow: hidden; background: radial-gradient(circle at 20% 20%, #a4378722, transparent 28%), radial-gradient(circle at 80% 70%, #2e5d9e22, transparent 26%), #121212; }
-        #pr-walkthrough-d3-canvas { width: 100%; height: 100%; min-height: 700px; display: block; }
+        #pr-walkthrough-canvas { width: 100%; height: 100%; min-height: 700px; display: block; }
         .d3-canvas-error { position: absolute; inset: 18px; display: none; place-items: center; border: 1px solid var(--warp-border); background: #1e1e1df2; color: var(--warp-text); padding: 24px; z-index: 2; }
         body.d3-canvas-error .d3-canvas-error { display: grid; }
         .d3-graph-title { fill: #faf9f6; opacity: 0.36; font-family: var(--warp-font-mono); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -117,8 +117,8 @@ def d3_canvas_runtime_script() -> str:
 
           function readInlineData() {{
             if (window.PR_WALKTHROUGH_D3_DATA) return window.PR_WALKTHROUGH_D3_DATA;
-            const script = document.getElementById('pr-walkthrough-d3-data');
-            if (!script) throw new Error('Missing pr-walkthrough-d3-data script tag');
+            const script = document.getElementById('pr-walkthrough-data');
+            if (!script) throw new Error('Missing pr-walkthrough-data script tag');
             return JSON.parse(script.textContent || '{{}}');
           }}
 
@@ -148,7 +148,7 @@ def d3_canvas_runtime_script() -> str:
           }}
 
           function renderDetails(node, graph) {{
-            const panel = document.getElementById('pr-walkthrough-d3-details');
+            const panel = document.getElementById('pr-walkthrough-details');
             if (!panel) return;
             const step = (graph.tour || [])[tourIndex];
             if (!node) {{
@@ -273,8 +273,8 @@ def d3_canvas_runtime_script() -> str:
           function renderActiveGraph(options = {{}}) {{
             const graph = activeGraph();
             if (!graph) throw new Error('No active graph');
-            const svg = window.d3.select('#pr-walkthrough-d3-canvas');
-            if (svg.empty()) throw new Error('Missing #pr-walkthrough-d3-canvas');
+            const svg = window.d3.select('#pr-walkthrough-canvas');
+            if (svg.empty()) throw new Error('Missing #pr-walkthrough-canvas');
             svg.selectAll('*').remove();
             svgSelection = svg;
             const nodesById = nodeMap(graph);
@@ -416,7 +416,7 @@ def graph_controls_markup(data: dict) -> str:
 
 def html_template(data: dict) -> str:
     meta = data.get("meta") or {}
-    title = str(meta.get("title") or "PR Walkthrough D3")
+    title = str(meta.get("title") or "PR Walkthrough")
     summary = str(meta.get("summary") or "Interactive PR walkthrough graphs.")
     pr_url = str(meta.get("prUrl") or "")
     base = str(meta.get("baseRef") or "")
@@ -443,13 +443,13 @@ def html_template(data: dict) -> str:
             <section class="d3-canvas-layout">
               {graph_controls_markup(data)}
               <section class="d3-canvas-stage">
-                <svg id="pr-walkthrough-d3-canvas" role="img" aria-label="Interactive PR walkthrough graph"></svg>
+                <svg id="pr-walkthrough-canvas" role="img" aria-label="Interactive PR walkthrough graph"></svg>
                 <div class="d3-canvas-error" role="alert"></div>
               </section>
-              <aside id="pr-walkthrough-d3-details" class="d3-detail-panel" aria-label="Selected point details"></aside>
+              <aside id="pr-walkthrough-details" class="d3-detail-panel" aria-label="Selected point details"></aside>
             </section>
             <script>window.PR_WALKTHROUGH_D3_DATA = {data_json};</script>
-            <script id="pr-walkthrough-d3-data" type="application/json">{data_json}</script>
+            <script id="pr-walkthrough-data" type="application/json">{data_json}</script>
             {d3_canvas_runtime_script()}
           </main>
         </body>
