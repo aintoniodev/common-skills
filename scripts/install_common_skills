@@ -9,16 +9,106 @@ SKILLS_CLI_VERSION="1.5.6"
 COMMON_SKILLS_SOURCE="warpdotdev/common-skills"
 SKILLS_CLI_AGENT="warp"
 COMMON_SKILL_SELECTOR="*"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/common_skills_lib"
 
 IF_NEEDED=0
 FORCE=0
 QUIET=0
 PROMPT_FOR_TARGET=0
 NON_INTERACTIVE=0
+VERIFY_ONLY=0
 TARGET="${WARP_COMMON_SKILLS_INSTALL_TARGET:-}"
 RESOLVED_TARGET=""
+
+resolve_repo_root() {
+  cd "$1" && pwd
+}
+
+lock_hash() {
+  git -C "${REPO_ROOT}" hash-object "${LOCK_FILE}"
+}
+
+project_stamp_file() {
+  local git_path=""
+
+  if git_path="$(git -C "${REPO_ROOT}" rev-parse --git-path "${STAMP_RELATIVE_PATH}" 2>/dev/null)"; then
+    case "${git_path}" in
+      /*)
+        echo "${git_path}"
+        ;;
+      *)
+        echo "${REPO_ROOT}/${git_path}"
+        ;;
+    esac
+    return
+  fi
+
+  echo "${REPO_ROOT}/.agents/skills/.common-skills-lock.hash"
+}
+
+global_stamp_file() {
+  echo "${HOME}/.agents/warp/common-skills-lock.hash"
+}
+
+stamp_file() {
+  if [[ "${TARGET}" = "global" ]]; then
+    global_stamp_file
+  else
+    project_stamp_file
+  fi
+}
+
+stamp_hash() {
+  local file="$1"
+
+  if [[ -f "${file}" ]]; then
+    cat "${file}"
+  fi
+}
+
+normalize_common_skills_target() {
+  local target
+  target="$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]')"
+
+  case "${target}" in
+    ""|p|project|1)
+      echo "project"
+      ;;
+    g|global|2)
+      echo "global"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+locked_skill_names() {
+  node -e '
+const fs = require("fs");
+const lock = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+for (const name of Object.keys(lock.skills || {})) {
+  console.log(name);
+}
+' "${LOCK_FILE}"
+}
+
+locked_skill_paths() {
+  node -e '
+const fs = require("fs");
+const lock = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+for (const skill of Object.values(lock.skills || {})) {
+  console.log(skill.skillPath);
+}
+' "${LOCK_FILE}"
+}
+
+target_description() {
+  if [[ "${TARGET}" = "global" ]]; then
+    echo "~/.agents/skills"
+  else
+    echo ".agents/skills"
+  fi
+}
 
 usage() {
   cat <<EOF
@@ -36,6 +126,7 @@ Options:
   --non-interactive    Do not prompt; use the detected or default install target.
   --force              Install even if the local stamp is already up to date.
   --quiet              Suppress "already up to date" informational output.
+  --verify-only        Verify common skills without installing or updating them.
   -h, --help           Show this help message.
 
 Environment:
@@ -326,6 +417,165 @@ install_from_lock() {
   fi
 }
 
+verify_common_skills() {
+  if [[ ! -f "${LOCK_FILE}" ]]; then
+    echo "error: missing skills lock file: ${LOCK_FILE}" >&2
+    exit 1
+  fi
+
+  node - "${LOCK_FILE}" "${REPO_ROOT}" "${HOME}" "${TARGET}" "${QUIET}" <<'NODE'
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+
+const lockFile = process.argv[2];
+const repoRoot = process.argv[3];
+const home = process.argv[4];
+let target = process.argv[5];
+const quiet = process.argv[6] === "1";
+
+function fail(messages) {
+  for (const message of messages) {
+    console.error(message);
+  }
+  process.exit(1);
+}
+
+function lockedSkills() {
+  const lock = JSON.parse(fs.readFileSync(lockFile, "utf8"));
+  const skills = Object.entries(lock.skills || {});
+
+  if (skills.length === 0) {
+    fail([`error: no skills found in ${lockFile}`]);
+  }
+
+  return skills;
+}
+
+function projectSkillFile(skill) {
+  return path.join(repoRoot, skill.skillPath);
+}
+
+function globalSkillFile(name) {
+  return path.join(home, ".agents", "skills", name, "SKILL.md");
+}
+
+function targetSkillDir(name, skill, installTarget) {
+  if (installTarget === "global") {
+    return path.dirname(globalSkillFile(name));
+  }
+
+  return path.dirname(projectSkillFile(skill));
+}
+
+function containsLockedSkill(skills, installTarget) {
+  return skills.some(([name, skill]) => {
+    const skillFile = installTarget === "global"
+      ? globalSkillFile(name)
+      : projectSkillFile(skill);
+    return fs.existsSync(skillFile);
+  });
+}
+
+function collectFiles(baseDir, currentDir, results) {
+  for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+    const fullPath = path.join(currentDir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (entry.name === ".git" || entry.name === "node_modules") {
+        continue;
+      }
+
+      collectFiles(baseDir, fullPath, results);
+    } else if (entry.isFile()) {
+      results.push({
+        relativePath: path.relative(baseDir, fullPath).split(path.sep).join("/"),
+        content: fs.readFileSync(fullPath),
+      });
+    }
+  }
+}
+
+function computeSkillFolderHash(skillDir) {
+  const files = [];
+  collectFiles(skillDir, skillDir, files);
+  files.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+
+  const hash = crypto.createHash("sha256");
+  for (const file of files) {
+    hash.update(file.relativePath);
+    hash.update(file.content);
+  }
+
+  return hash.digest("hex");
+}
+
+function verifyTarget(skills, installTarget) {
+  const errors = [];
+
+  for (const [name, skill] of skills) {
+    const skillDir = targetSkillDir(name, skill, installTarget);
+    const skillFile = path.join(skillDir, "SKILL.md");
+
+    if (!fs.existsSync(skillFile)) {
+      errors.push(`error: missing ${name} in ${installTarget === "global" ? "~/.agents/skills" : ".agents/skills"}`);
+      continue;
+    }
+
+    const computedHash = computeSkillFolderHash(skillDir);
+    if (computedHash !== skill.computedHash) {
+      errors.push(`error: ${name} does not match skills-lock.json`);
+      errors.push(`  expected: ${skill.computedHash}`);
+      errors.push(`  actual:   ${computedHash}`);
+    }
+  }
+
+  if (errors.length > 0) {
+    fail(errors);
+  }
+}
+
+const skills = lockedSkills();
+const projectPresent = containsLockedSkill(skills, "project");
+const globalPresent = containsLockedSkill(skills, "global");
+
+if (projectPresent && globalPresent) {
+  fail([
+    "error: common agent skills are installed in both this checkout's .agents/skills and ~/.agents/skills.",
+    `Remove one copy with scripts/remove_common_skills --repo-root ${repoRoot} or scripts/remove_common_skills --repo-root ${repoRoot} --global, then rerun.`,
+  ]);
+}
+
+if (!projectPresent && !globalPresent) {
+  fail([
+    "error: common agent skills are not installed in this checkout's .agents/skills or ~/.agents/skills.",
+    `Install them with scripts/install_common_skills --repo-root ${repoRoot}, then rerun.`,
+  ]);
+}
+
+if (target) {
+  if (target !== "project" && target !== "global") {
+    fail([`error: invalid common skills verification target: ${target} (expected project or global)`]);
+  }
+
+  if (target === "project" && !projectPresent) {
+    fail(["error: common agent skills are not installed in this checkout's .agents/skills."]);
+  }
+
+  if (target === "global" && !globalPresent) {
+    fail(["error: common agent skills are not installed in ~/.agents/skills."]);
+  }
+} else {
+  target = projectPresent ? "project" : "global";
+}
+
+verifyTarget(skills, target);
+if (!quiet) {
+  console.log(`Common skills are installed in ${target === "global" ? "~/.agents/skills" : ".agents/skills"} and match skills-lock.json.`);
+}
+NODE
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --repo-root)
@@ -366,6 +616,10 @@ while [[ $# -gt 0 ]]; do
       QUIET=1
       shift
       ;;
+    --verify-only)
+      VERIFY_ONLY=1
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -393,6 +647,10 @@ if ! RESOLVED_TARGET="$(resolve_common_skills_target)"; then
   exit 1
 fi
 TARGET="${RESOLVED_TARGET}"
+if [[ "${VERIFY_ONLY}" -eq 1 ]]; then
+  verify_common_skills
+  exit 0
+fi
 if [[ ! -f "${LOCK_FILE}" ]]; then
   echo "Creating skills-lock.json from ${COMMON_SKILLS_SOURCE}."
   install_project_from_source
@@ -410,6 +668,7 @@ if [[ ! -f "${LOCK_FILE}" ]]; then
   STAMP_FILE="$(stamp_file)"
   mkdir -p "$(dirname "${STAMP_FILE}")"
   printf "%s\n" "${LOCK_HASH}" > "${STAMP_FILE}"
+  verify_common_skills
   exit 0
 fi
 
@@ -419,6 +678,7 @@ STAMP_HASH="$(stamp_hash "${STAMP_FILE}")"
 
 if [[ "${FORCE}" -ne 1 && "${IF_NEEDED}" -eq 1 && "${STAMP_HASH}" = "${LOCK_HASH}" ]] && locked_skills_installed; then
   log "Common skills are already up to date."
+  verify_common_skills
   exit 0
 fi
 
@@ -427,3 +687,4 @@ install_from_lock
 LOCK_HASH="$(lock_hash)"
 mkdir -p "$(dirname "${STAMP_FILE}")"
 printf "%s\n" "${LOCK_HASH}" > "${STAMP_FILE}"
+verify_common_skills

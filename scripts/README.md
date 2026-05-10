@@ -1,10 +1,8 @@
 # Common skills scripts
 These scripts help consuming repositories install, remove, and verify shared agent skills from `warpdotdev/common-skills`.
 ## Files
-- `common_skills_lib`: shared helper functions for repository resolution, target descriptions, lock parsing, lock hashes, and stamp paths.
-- `install_common_skills`: installs or updates common skills.
+- `install_common_skills`: installs or updates common skills, then verifies the installed contents.
 - `remove_common_skills`: removes installed common skills from a selected target.
-- `verify_common_skills`: verifies installed skills match `skills-lock.json`.
 ## Quick start
 Install common skills into the current checkout:
 ```sh
@@ -18,9 +16,9 @@ Install only when the lock hash has changed or a locked skill is missing:
 ```sh
 scripts/install_common_skills --if-needed --non-interactive
 ```
-Verify the installed skills:
+Verify the installed skills without installing:
 ```sh
-scripts/verify_common_skills
+scripts/install_common_skills --verify-only
 ```
 Remove installed common skills:
 ```sh
@@ -41,6 +39,8 @@ The script supports:
 - `--non-interactive`: do not prompt; use detected/default target.
 - `--force`: install even if already up to date.
 - `--quiet`: suppress no-op output.
+- `--verify-only`: verify installed skills match `skills-lock.json` without installing.
+Successful install and skip paths verify that exactly one install target contains the locked common skills and that each installed skill matches `skills-lock.json`.
 ## Remove script
 `remove_common_skills` removes common agent skills listed in `skills-lock.json`.
 The script supports:
@@ -49,12 +49,9 @@ The script supports:
 - `--global`: remove from `~/.agents/skills`.
 - `--clear-lock`: remove `skills-lock.json` after removing locked skills.
 The remove script only deletes paths derived from the lock file and includes path checks before removing project skill directories.
-## Verify script
-`verify_common_skills` checks that exactly one install target contains the locked common skills and that each installed skill matches `skills-lock.json`.
-The script supports:
-- `--repo-root <path>`: repository containing `skills-lock.json`.
-- `--project`: require project-local install.
-- `--global`: require global install.
+## Verification
+`install_common_skills --verify-only` checks that exactly one install target contains the locked common skills and that each installed skill matches `skills-lock.json`.
+Verification also runs after successful install and skip paths.
 Verification fails if:
 - `skills-lock.json` is missing.
 - Locked skills are installed in both project and global targets.

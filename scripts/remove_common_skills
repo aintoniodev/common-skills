@@ -8,8 +8,89 @@ STAMP_RELATIVE_PATH="warp/common-skills-lock.hash"
 CLEAR_LOCK=0
 
 TARGET="${WARP_COMMON_SKILLS_INSTALL_TARGET:-project}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/common_skills_lib"
+
+resolve_repo_root() {
+  cd "$1" && pwd
+}
+
+lock_hash() {
+  git -C "${REPO_ROOT}" hash-object "${LOCK_FILE}"
+}
+
+project_stamp_file() {
+  local git_path=""
+
+  if git_path="$(git -C "${REPO_ROOT}" rev-parse --git-path "${STAMP_RELATIVE_PATH}" 2>/dev/null)"; then
+    case "${git_path}" in
+      /*)
+        echo "${git_path}"
+        ;;
+      *)
+        echo "${REPO_ROOT}/${git_path}"
+        ;;
+    esac
+    return
+  fi
+
+  echo "${REPO_ROOT}/.agents/skills/.common-skills-lock.hash"
+}
+
+global_stamp_file() {
+  echo "${HOME}/.agents/warp/common-skills-lock.hash"
+}
+
+stamp_file() {
+  if [[ "${TARGET}" = "global" ]]; then
+    global_stamp_file
+  else
+    project_stamp_file
+  fi
+}
+
+normalize_common_skills_target() {
+  local target
+  target="$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]')"
+
+  case "${target}" in
+    ""|p|project|1)
+      echo "project"
+      ;;
+    g|global|2)
+      echo "global"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+locked_skill_names() {
+  node -e '
+const fs = require("fs");
+const lock = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+for (const name of Object.keys(lock.skills || {})) {
+  console.log(name);
+}
+' "${LOCK_FILE}"
+}
+
+locked_skill_paths() {
+  node -e '
+const fs = require("fs");
+const lock = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+for (const skill of Object.values(lock.skills || {})) {
+  console.log(skill.skillPath);
+}
+' "${LOCK_FILE}"
+}
+
+target_description() {
+  if [[ "${TARGET}" = "global" ]]; then
+    echo "~/.agents/skills"
+  else
+    echo ".agents/skills"
+  fi
+}
 
 usage() {
   cat <<EOF
