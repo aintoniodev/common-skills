@@ -35,6 +35,24 @@ project_stamp_file() {
   echo "${REPO_ROOT}/.agents/skills/.common-skills-lock.hash"
 }
 
+project_exclude_file() {
+  local git_path=""
+
+  if git_path="$(git -C "${REPO_ROOT}" rev-parse --git-path "info/exclude" 2>/dev/null)"; then
+    case "${git_path}" in
+      /*)
+        echo "${git_path}"
+        ;;
+      *)
+        echo "${REPO_ROOT}/${git_path}"
+        ;;
+    esac
+    return
+  fi
+
+  return 1
+}
+
 global_stamp_file() {
   echo "${HOME}/.agents/warp/common-skills-lock.hash"
 }
@@ -170,9 +188,34 @@ remove_from_lock() {
     remove_global_from_lock
   else
     remove_project_from_lock
+    remove_project_common_skills_ignore_block
   fi
 
   rm -f -- "$(stamp_file)"
+}
+
+remove_project_common_skills_ignore_block() {
+  local exclude_file=""
+  local tmp_file=""
+  local marker_start="# BEGIN warp common-skills"
+  local marker_end="# END warp common-skills"
+
+  if ! exclude_file="$(project_exclude_file)"; then
+    return 0
+  fi
+
+  if [[ ! -f "${exclude_file}" ]]; then
+    return 0
+  fi
+
+  tmp_file="$(mktemp)"
+  awk -v start="${marker_start}" -v end="${marker_end}" '
+    $0 == start { skipping = 1; next }
+    $0 == end { skipping = 0; next }
+    !skipping { print }
+  ' "${exclude_file}" > "${tmp_file}"
+  cat "${tmp_file}" > "${exclude_file}"
+  rm -f "${tmp_file}"
 }
 
 while [[ $# -gt 0 ]]; do

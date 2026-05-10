@@ -41,6 +41,7 @@ The script supports:
 - `--quiet`: suppress no-op output.
 - `--verify-only`: verify installed skills match `skills-lock.json` without installing.
 Successful install and skip paths verify that exactly one install target contains the locked common skills and that each installed skill matches `skills-lock.json`.
+Project installs add local Git exclude entries for only the locked common-skill directories so unrelated project skills in `.agents/skills` remain visible to Git.
 Global installs are shared across client repositories. A second repo pinned to the same lock verifies and succeeds without unnecessarily reinstalling; a repo pinned to a different lock fails with a version-mismatch error instead of overwriting the shared global install.
 ## Remove script
 `remove_common_skills` removes common agent skills listed in `skills-lock.json`.
