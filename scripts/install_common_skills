@@ -8,18 +8,7 @@ STAMP_RELATIVE_PATH="warp/common-skills-lock.hash"
 SKILLS_CLI_VERSION="1.5.6"
 COMMON_SKILLS_SOURCE="warpdotdev/common-skills"
 GLOBAL_AGENT="warp"
-COMMON_SKILL_NAMES=(
-  create-pr
-  diagnose-ci-failures
-  fix-errors
-  implement-specs
-  resolve-merge-conflicts
-  review-pr
-  spec-driven-implementation
-  update-skill
-  write-product-spec
-  write-tech-spec
-)
+COMMON_SKILL_SELECTOR="*"
 
 IF_NEEDED=0
 FORCE=0
@@ -314,23 +303,13 @@ for (const skill of Object.values(lock.skills || {})) {
 common_skill_names() {
   if [[ -f "${LOCK_FILE}" ]]; then
     locked_skill_names
-    return
   fi
-
-  printf "%s\n" "${COMMON_SKILL_NAMES[@]}"
 }
 
 common_skill_paths() {
-  local name=""
-
   if [[ -f "${LOCK_FILE}" ]]; then
     locked_skill_paths
-    return
   fi
-
-  for name in "${COMMON_SKILL_NAMES[@]}"; do
-    echo ".agents/skills/${name}/SKILL.md"
-  done
 }
 
 locked_skills_installed() {
@@ -355,7 +334,7 @@ locked_skills_installed() {
 install_project_from_source() {
   (
     cd "${REPO_ROOT}"
-    npx --yes "skills@${SKILLS_CLI_VERSION}" add "${COMMON_SKILLS_SOURCE}" -a "${GLOBAL_AGENT}" -s "${COMMON_SKILL_NAMES[@]}" -y --copy
+    npx --yes "skills@${SKILLS_CLI_VERSION}" add "${COMMON_SKILLS_SOURCE}" -a "${GLOBAL_AGENT}" -s "${COMMON_SKILL_SELECTOR}" -y --copy
   )
 }
 
