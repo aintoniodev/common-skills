@@ -27,6 +27,7 @@ scripts/remove_common_skills --project
 ## Install script
 `install_common_skills` installs common agent skills from `warpdotdev/common-skills`.
 When `skills-lock.json` is missing, the script creates it by running the `skills` CLI against the source repo and selecting all valid skills. This is intentionally dynamic: the script should not hardcode a fixed list of common skill names.
+When `skills-lock.json` already exists and the script is running interactively, it checks whether `warpdotdev/common-skills` would produce an updated lock before prompting for a project/global install target. If a different lock is available, it asks before updating `skills-lock.json` and reinstalling from the updated lock. Non-interactive and verify-only runs skip this upstream update prompt and use the existing lock.
 When `skills-lock.json` already exists, the script installs from the lock file:
 - Project target: `npx --yes skills@1.5.6 experimental_install`
 - Global target: `npx --yes skills@1.5.6 add warpdotdev/common-skills --global --agent warp --skill <locked skills> --yes --copy`

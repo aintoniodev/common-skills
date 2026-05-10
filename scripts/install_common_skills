@@ -18,6 +18,8 @@ NON_INTERACTIVE=0
 VERIFY_ONLY=0
 TARGET="${WARP_COMMON_SKILLS_INSTALL_TARGET:-}"
 RESOLVED_TARGET=""
+ALLOW_GLOBAL_LOCK_UPDATE=0
+UPDATED_LOCK_CANDIDATE=""
 
 resolve_repo_root() {
   cd "$1" && pwd
@@ -292,6 +294,86 @@ log() {
   fi
 }
 
+can_prompt_interactively() {
+  [[ "${NON_INTERACTIVE}" -ne 1 && -r /dev/tty && -w /dev/tty ]]
+}
+
+prepare_updated_lock_candidate() {
+  local temp_dir=""
+  local update_output=""
+
+  temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/common-skills-lock.XXXXXX")"
+  update_output="${temp_dir}/update.log"
+
+  cp "${LOCK_FILE}" "${temp_dir}/skills-lock.json"
+  git -C "${temp_dir}" init >/dev/null 2>&1 || true
+
+  if ! (
+    cd "${temp_dir}"
+    npx --yes "skills@${SKILLS_CLI_VERSION}" update -p -y
+  ) > "${update_output}" 2>&1; then
+    if [[ "${QUIET}" -ne 1 ]]; then
+      echo "warning: could not check for updated common skills from ${COMMON_SKILLS_SOURCE}; continuing with the existing skills-lock.json." >&2
+    fi
+    rm -rf "${temp_dir}"
+    return 1
+  fi
+
+  if [[ ! -f "${temp_dir}/skills-lock.json" ]]; then
+    if [[ "${QUIET}" -ne 1 ]]; then
+      echo "warning: common skills update check did not produce a candidate skills-lock.json; continuing with the existing lock." >&2
+    fi
+    rm -rf "${temp_dir}"
+    return 1
+  fi
+
+  if cmp -s "${LOCK_FILE}" "${temp_dir}/skills-lock.json"; then
+    rm -rf "${temp_dir}"
+    return 1
+  fi
+
+  UPDATED_LOCK_CANDIDATE="$(mktemp "${TMPDIR:-/tmp}/common-skills-lock-candidate.XXXXXX")"
+  cp "${temp_dir}/skills-lock.json" "${UPDATED_LOCK_CANDIDATE}"
+  rm -rf "${temp_dir}"
+  return 0
+}
+
+maybe_prompt_for_upstream_lock_update() {
+  local reply=""
+
+  if [[ ! -f "${LOCK_FILE}" ]]; then
+    return 0
+  fi
+
+  if ! can_prompt_interactively; then
+    return 0
+  fi
+
+  if ! prepare_updated_lock_candidate; then
+    return 0
+  fi
+
+  echo "Common agent skills have been updated in ${COMMON_SKILLS_SOURCE}." > /dev/tty
+  printf "Update ${LOCK_FILE} and reinstall common skills from the updated lock? [y/N]: " > /dev/tty
+  read -r reply < /dev/tty
+
+  case "$(printf "%s" "${reply}" | tr '[:upper:]' '[:lower:]')" in
+    y|yes)
+      cp "${UPDATED_LOCK_CANDIDATE}" "${LOCK_FILE}"
+      rm -f "${UPDATED_LOCK_CANDIDATE}"
+      UPDATED_LOCK_CANDIDATE=""
+      ALLOW_GLOBAL_LOCK_UPDATE=1
+      FORCE=1
+      echo "Updated skills-lock.json. Common skills will be reinstalled from the updated lock." > /dev/tty
+      ;;
+    *)
+      rm -f "${UPDATED_LOCK_CANDIDATE}"
+      UPDATED_LOCK_CANDIDATE=""
+      echo "Keeping existing skills-lock.json. Common skills will be installed from the existing lock." > /dev/tty
+      ;;
+  esac
+}
+
 common_skill_names() {
   if [[ -f "${LOCK_FILE}" ]]; then
     locked_skill_names
@@ -460,6 +542,10 @@ fail_if_global_lock_mismatch() {
 
   current_lock_hash="$(lock_hash)"
   if [[ "${target_stamp_hash}" = "${current_lock_hash}" ]]; then
+    return 0
+  fi
+
+  if [[ "${TARGET}" = "global" && "${ALLOW_GLOBAL_LOCK_UPDATE}" -eq 1 ]]; then
     return 0
   fi
 
@@ -711,6 +797,7 @@ if [[ "${VERIFY_ONLY}" -eq 1 ]]; then
   verify_common_skills
   exit 0
 fi
+maybe_prompt_for_upstream_lock_update
 if ! RESOLVED_TARGET="$(resolve_common_skills_target)"; then
   echo "error: could not resolve common skills install target" >&2
   usage >&2
