@@ -8,6 +8,8 @@ STAMP_RELATIVE_PATH="warp/common-skills-lock.hash"
 CLEAR_LOCK=0
 
 TARGET="${WARP_COMMON_SKILLS_INSTALL_TARGET:-project}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common_skills_lib"
 
 usage() {
   cat <<EOF
@@ -28,56 +30,6 @@ Environment:
   WARP_COMMON_SKILLS_TARGET_REPO_ROOT=/path/to/repo
       Repository containing skills-lock.json and project-local .agents/skills.
 EOF
-}
-
-project_stamp_file() {
-  local git_path=""
-
-  if git_path="$(git -C "${REPO_ROOT}" rev-parse --git-path "${STAMP_RELATIVE_PATH}" 2>/dev/null)"; then
-    case "${git_path}" in
-      /*)
-        echo "${git_path}"
-        ;;
-      *)
-        echo "${REPO_ROOT}/${git_path}"
-        ;;
-    esac
-    return
-  fi
-
-  echo "${REPO_ROOT}/.agents/skills/.common-skills-lock.hash"
-}
-
-global_stamp_file() {
-  echo "${HOME}/.agents/warp/common-skills-lock.hash"
-}
-
-stamp_file() {
-  if [[ "${TARGET}" = "global" ]]; then
-    global_stamp_file
-  else
-    project_stamp_file
-  fi
-}
-
-locked_skill_names() {
-  node -e '
-const fs = require("fs");
-const lock = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-for (const name of Object.keys(lock.skills || {})) {
-  console.log(name);
-}
-' "${LOCK_FILE}"
-}
-
-locked_skill_paths() {
-  node -e '
-const fs = require("fs");
-const lock = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-for (const skill of Object.values(lock.skills || {})) {
-  console.log(skill.skillPath);
-}
-' "${LOCK_FILE}"
 }
 
 remove_project_from_lock() {
@@ -142,14 +94,6 @@ remove_from_lock() {
   rm -f -- "$(stamp_file)"
 }
 
-target_description() {
-  if [[ "${TARGET}" = "global" ]]; then
-    echo "~/.agents/skills"
-  else
-    echo ".agents/skills"
-  fi
-}
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --repo-root)
@@ -186,7 +130,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if ! REPO_ROOT="$(cd "${REPO_ROOT}" && pwd)"; then
+if ! REPO_ROOT="$(resolve_repo_root "${REPO_ROOT}")"; then
   echo "error: repo root does not exist: ${REPO_ROOT}" >&2
   exit 1
 fi

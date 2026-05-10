@@ -7,8 +7,10 @@ LOCK_FILE=""
 STAMP_RELATIVE_PATH="warp/common-skills-lock.hash"
 SKILLS_CLI_VERSION="1.5.6"
 COMMON_SKILLS_SOURCE="warpdotdev/common-skills"
-GLOBAL_AGENT="warp"
+SKILLS_CLI_AGENT="warp"
 COMMON_SKILL_SELECTOR="*"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common_skills_lib"
 
 IF_NEEDED=0
 FORCE=0
@@ -221,85 +223,6 @@ log() {
   fi
 }
 
-lock_hash() {
-  git -C "${REPO_ROOT}" hash-object "${LOCK_FILE}"
-}
-
-project_stamp_file() {
-  local git_path=""
-
-  if git_path="$(git -C "${REPO_ROOT}" rev-parse --git-path "${STAMP_RELATIVE_PATH}" 2>/dev/null)"; then
-    case "${git_path}" in
-      /*)
-        echo "${git_path}"
-        ;;
-      *)
-        echo "${REPO_ROOT}/${git_path}"
-        ;;
-    esac
-    return
-  fi
-
-  echo "${REPO_ROOT}/.agents/skills/.common-skills-lock.hash"
-}
-
-global_stamp_file() {
-  echo "${HOME}/.agents/warp/common-skills-lock.hash"
-}
-
-stamp_file() {
-  if [[ "${TARGET}" = "global" ]]; then
-    global_stamp_file
-  else
-    project_stamp_file
-  fi
-}
-
-stamp_hash() {
-  local file="$1"
-
-  if [[ -f "${file}" ]]; then
-    cat "${file}"
-  fi
-}
-
-normalize_common_skills_target() {
-  local target
-  target="$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]')"
-
-  case "${target}" in
-    ""|p|project|1)
-      echo "project"
-      ;;
-    g|global|2)
-      echo "global"
-      ;;
-    *)
-      return 1
-      ;;
-  esac
-}
-
-locked_skill_names() {
-  node -e '
-const fs = require("fs");
-const lock = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-for (const name of Object.keys(lock.skills || {})) {
-  console.log(name);
-}
-' "${LOCK_FILE}"
-}
-
-locked_skill_paths() {
-  node -e '
-const fs = require("fs");
-const lock = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-for (const skill of Object.values(lock.skills || {})) {
-  console.log(skill.skillPath);
-}
-' "${LOCK_FILE}"
-}
-
 common_skill_names() {
   if [[ -f "${LOCK_FILE}" ]]; then
     locked_skill_names
@@ -334,7 +257,7 @@ locked_skills_installed() {
 install_project_from_source() {
   (
     cd "${REPO_ROOT}"
-    npx --yes "skills@${SKILLS_CLI_VERSION}" add "${COMMON_SKILLS_SOURCE}" -a "${GLOBAL_AGENT}" -s "${COMMON_SKILL_SELECTOR}" -y --copy
+    npx --yes "skills@${SKILLS_CLI_VERSION}" add "${COMMON_SKILLS_SOURCE}" -a "${SKILLS_CLI_AGENT}" -s "${COMMON_SKILL_SELECTOR}" -y --copy
   )
 }
 
@@ -360,7 +283,7 @@ install_global_from_lock() {
 
   (
     cd "${REPO_ROOT}"
-    npx --yes "skills@${SKILLS_CLI_VERSION}" add "${COMMON_SKILLS_SOURCE}" -g -a "${GLOBAL_AGENT}" -s "${skill_names[@]}" -y --copy
+    npx --yes "skills@${SKILLS_CLI_VERSION}" add "${COMMON_SKILLS_SOURCE}" -g -a "${SKILLS_CLI_AGENT}" -s "${skill_names[@]}" -y --copy
   )
 }
 
@@ -400,14 +323,6 @@ install_from_lock() {
     install_global_from_lock
   else
     install_project_from_lock
-  fi
-}
-
-target_description() {
-  if [[ "${TARGET}" = "global" ]]; then
-    echo "~/.agents/skills"
-  else
-    echo ".agents/skills"
   fi
 }
 
@@ -463,7 +378,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if ! REPO_ROOT="$(cd "${REPO_ROOT}" && pwd)"; then
+if ! REPO_ROOT="$(resolve_repo_root "${REPO_ROOT}")"; then
   echo "error: repo root does not exist: ${REPO_ROOT}" >&2
   exit 1
 fi

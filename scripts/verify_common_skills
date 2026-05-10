@@ -5,6 +5,8 @@ set -eo pipefail
 REPO_ROOT="${WARP_COMMON_SKILLS_TARGET_REPO_ROOT:-$(pwd)}"
 LOCK_FILE=""
 TARGET=""
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common_skills_lib"
 
 usage() {
   cat <<EOF
@@ -56,7 +58,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if ! REPO_ROOT="$(cd "${REPO_ROOT}" && pwd)"; then
+if ! REPO_ROOT="$(resolve_repo_root "${REPO_ROOT}")"; then
   echo "error: repo root does not exist: ${REPO_ROOT}" >&2
   exit 1
 fi
