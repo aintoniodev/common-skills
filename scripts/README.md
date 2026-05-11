@@ -24,6 +24,36 @@ Remove installed common skills:
 ```sh
 scripts/remove_common_skills --project
 ```
+## Invoking from client repositories
+Client repositories do not need to vendor these scripts. `warpdotdev/warp#10617` adds a small `script/resolve_common_skills` wrapper to the Warp repo that resolves a script from this repository and forwards arguments to it.
+The wrapper's default path executes the raw GitHub script through `curl`:
+```sh
+curl -fsSL "https://raw.githubusercontent.com/warpdotdev/common-skills/${WARP_COMMON_SKILLS_REF:-main}/scripts/install_common_skills" | bash -s -- --repo-root "${REPO_ROOT}" --if-needed --prompt-for-target
+```
+Warp's bootstrap and run scripts call the wrapper instead of calling `curl` directly:
+```sh
+./script/resolve_common_skills install_common_skills -- --repo-root "${REPO_ROOT}" --if-needed --prompt-for-target
+```
+With an explicit target, client repos pass the same installer flags they would pass locally:
+```sh
+./script/resolve_common_skills install_common_skills -- --repo-root "${REPO_ROOT}" --global --if-needed
+./script/resolve_common_skills install_common_skills -- --repo-root "${REPO_ROOT}" --project --force
+```
+The resolver supports these development overrides:
+- `WARP_COMMON_SKILLS_REF=<git-ref>`: fetch scripts from a branch, tag, or commit in `warpdotdev/common-skills`; also forwarded to the installer so missing-lock creation and interactive lock update checks use the same ref.
+- `WARP_COMMON_SKILLS_SCRIPTS_DIR=/path/to/common-skills/scripts`: execute scripts from a local checkout or worktree instead of fetching from GitHub.
+- `WARP_COMMON_SKILLS_RAW_BASE_URL=https://...`: override the raw URL base used by the resolver.
+## Developing against these scripts from a client repo
+For normal client-repo development, test the remote path first:
+```sh
+WARP_COMMON_SKILLS_REF=<your-common-skills-branch> ./script/bootstrap --install-common-skills-globally
+WARP_COMMON_SKILLS_REF=<your-common-skills-branch> ./script/run --install-common-skills
+```
+Use `WARP_COMMON_SKILLS_SCRIPTS_DIR` when iterating on unpushed local script changes:
+```sh
+WARP_COMMON_SKILLS_SCRIPTS_DIR=/path/to/common-skills/scripts ./script/run --install-common-skills
+```
+Client repos should keep their own `skills-lock.json` checked in. Normal install flows use that lock as the source of truth; interactive flows may ask to update it when this repo would produce a different lock. Review and commit lock changes in the client repo separately from changes to this repo.
 ## Install script
 `install_common_skills` installs common agent skills from `warpdotdev/common-skills`.
 When `skills-lock.json` is missing, the script creates it by running the `skills` CLI against the source repo and selecting all valid skills. This is intentionally dynamic: the script should not hardcode a fixed list of common skill names. Set `WARP_COMMON_SKILLS_REF=<git-ref>` to create the lock from a branch, tag, or commit such as `warpdotdev/common-skills#my-branch`.
