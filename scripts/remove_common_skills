@@ -13,10 +13,6 @@ resolve_repo_root() {
   cd "$1" && pwd
 }
 
-lock_hash() {
-  git -C "${REPO_ROOT}" hash-object "${LOCK_FILE}"
-}
-
 project_stamp_file() {
   local git_path=""
 

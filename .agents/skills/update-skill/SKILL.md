@@ -111,5 +111,3 @@ See [references/best-practices.md](references/best-practices.md) for detailed au
 - Writing concise, effective instructions
 - Code example formatting
 - Common anti-patterns to avoid
-
-<!-- Lockfile update smoke test marker. -->

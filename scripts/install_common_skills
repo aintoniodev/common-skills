@@ -496,6 +496,7 @@ remove_project_skills_from_lock() {
     esac
   done < <(locked_skill_paths)
 }
+
 ensure_project_common_skills_ignored() {
   local exclude_file=""
   local path=""
@@ -808,10 +809,6 @@ if [[ "${WARP_SKIP_COMMON_SKILLS_INSTALL:-}" = "1" ]]; then
   log "Skipping common-skills install because WARP_SKIP_COMMON_SKILLS_INSTALL=1."
   exit 0
 fi
-if [[ "${VERIFY_ONLY}" -eq 1 && ! -f "${LOCK_FILE}" ]]; then
-  verify_common_skills
-  exit 1
-fi
 if [[ "${VERIFY_ONLY}" -eq 1 ]]; then
   if [[ -n "${TARGET}" ]]; then
     if ! RESOLVED_TARGET="$(normalize_common_skills_target "${TARGET}")"; then
@@ -839,7 +836,6 @@ if [[ ! -f "${LOCK_FILE}" ]]; then
     echo "error: expected ${LOCK_FILE} to be created by skills add" >&2
     exit 1
   fi
-  LOCK_HASH="$(lock_hash)"
   fail_if_global_lock_mismatch
 
   if [[ "${TARGET}" = "global" ]]; then
