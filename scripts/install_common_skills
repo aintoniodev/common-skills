@@ -149,6 +149,31 @@ target_description() {
   fi
 }
 
+validate_required_commands() {
+  local missing=0
+  local tool=""
+
+  for tool in "$@"; do
+    if ! command -v "${tool}" >/dev/null 2>&1; then
+      echo "error: required command '${tool}' is not installed or not on PATH." >&2
+      missing=1
+    fi
+  done
+
+  if [[ "${missing}" -eq 1 ]]; then
+    echo "Install the missing tools, then rerun scripts/install_common_skills." >&2
+    exit 1
+  fi
+}
+
+validate_verify_dependencies() {
+  validate_required_commands git node
+}
+
+validate_install_dependencies() {
+  validate_required_commands git node npm npx
+}
+
 usage() {
   cat <<EOF
 Usage: scripts/install_common_skills [options]
@@ -847,12 +872,18 @@ if [[ "${VERIFY_ONLY}" -eq 1 ]]; then
     fi
     TARGET="${RESOLVED_TARGET}"
   fi
+  if [[ ! -f "${LOCK_FILE}" ]]; then
+    verify_common_skills
+    exit 1
+  fi
+  validate_verify_dependencies
 
   fail_if_global_lock_mismatch
   verify_common_skills
   exit 0
 fi
 fail_if_target_requires_unavailable_prompt
+validate_install_dependencies
 maybe_prompt_for_upstream_lock_update
 if ! RESOLVED_TARGET="$(resolve_common_skills_target)"; then
   echo "error: could not resolve common skills install target" >&2
