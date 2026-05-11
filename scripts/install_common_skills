@@ -217,7 +217,7 @@ prompt_common_skills_target() {
   if [[ "${NON_INTERACTIVE}" -eq 1 ]]; then
     echo "error: common skills install target is required in non-interactive mode; pass --project, --global, or set WARP_COMMON_SKILLS_INSTALL_TARGET=project|global." >&2
     return 1
-  elif [[ -r /dev/tty && -w /dev/tty ]]; then
+  elif can_prompt_interactively; then
     echo "Where should common agent skills be installed?" > /dev/tty
     if [[ "${default_target}" = "global" ]]; then
       echo "  1) Project checkout .agents/skills" > /dev/tty
@@ -317,7 +317,23 @@ log() {
 }
 
 can_prompt_interactively() {
-  [[ "${NON_INTERACTIVE}" -ne 1 && -r /dev/tty && -w /dev/tty ]]
+  [[ "${NON_INTERACTIVE}" -ne 1 ]] && { true < /dev/tty; } 2>/dev/null && { true > /dev/tty; } 2>/dev/null
+}
+
+fail_if_target_requires_unavailable_prompt() {
+  if [[ -n "${TARGET}" || "${VERIFY_ONLY}" -eq 1 ]]; then
+    return 0
+  fi
+
+  if [[ "${NON_INTERACTIVE}" -eq 1 ]]; then
+    echo "error: common skills install target is required in non-interactive mode; pass --project, --global, or set WARP_COMMON_SKILLS_INSTALL_TARGET=project|global." >&2
+    exit 1
+  fi
+
+  if ! can_prompt_interactively; then
+    echo "error: common skills install target is required when no interactive prompt is available; pass --project, --global, or set WARP_COMMON_SKILLS_INSTALL_TARGET=project|global." >&2
+    exit 1
+  fi
 }
 
 prepare_updated_lock_candidate() {
@@ -444,7 +460,8 @@ install_project_from_lock() {
 install_global_from_lock() {
   local skill_names=()
   local name=""
-  local lock_source=""
+  local temp_dir=""
+  local skill_dir=""
 
   while IFS= read -r name; do
     skill_names+=("${name}")
@@ -455,15 +472,28 @@ install_global_from_lock() {
     exit 1
   fi
 
-  if ! lock_source="$(locked_common_skills_source)"; then
-    echo "error: no common-skills source found in ${LOCK_FILE}" >&2
-    exit 1
-  fi
+  temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/common-skills-global-install.XXXXXX")"
+  cp "${LOCK_FILE}" "${temp_dir}/skills-lock.json"
 
   (
-    cd "${REPO_ROOT}"
-    npx --yes "skills@${SKILLS_CLI_VERSION}" add "${lock_source}" -g -a "${SKILLS_CLI_AGENT}" -s "${skill_names[@]}" -y --copy
+    cd "${temp_dir}"
+    npx --yes "skills@${SKILLS_CLI_VERSION}" experimental_install
   ) < /dev/null
+
+  mkdir -p "${HOME}/.agents/skills"
+  for name in "${skill_names[@]}"; do
+    skill_dir="${temp_dir}/.agents/skills/${name}"
+    if [[ ! -d "${skill_dir}" ]]; then
+      rm -rf "${temp_dir}"
+      echo "error: expected ${name} to be restored from ${LOCK_FILE}" >&2
+      exit 1
+    fi
+
+    rm -rf -- "${HOME}/.agents/skills/${name}"
+    cp -R "${skill_dir}" "${HOME}/.agents/skills/${name}"
+  done
+
+  rm -rf "${temp_dir}"
 }
 
 remove_project_skills_from_lock() {
@@ -822,6 +852,7 @@ if [[ "${VERIFY_ONLY}" -eq 1 ]]; then
   verify_common_skills
   exit 0
 fi
+fail_if_target_requires_unavailable_prompt
 maybe_prompt_for_upstream_lock_update
 if ! RESOLVED_TARGET="$(resolve_common_skills_target)"; then
   echo "error: could not resolve common skills install target" >&2
