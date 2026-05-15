@@ -1,6 +1,7 @@
 # Common skills scripts
 These scripts help consuming repositories install, remove, and verify shared agent skills from `warpdotdev/common-skills`.
 ## Files
+- `resolve_common_skills`: resolves and executes scripts from this directory, a local override directory, or raw GitHub.
 - `install_common_skills`: installs or updates common skills, then verifies the installed contents.
 - `remove_common_skills`: removes installed common skills from a selected target.
 ## Quick start
@@ -25,12 +26,28 @@ Remove installed common skills:
 scripts/remove_common_skills --project
 ```
 ## Invoking from client repositories
-Client repositories do not need to vendor these scripts. `warpdotdev/warp#10617` adds a small `script/resolve_common_skills` wrapper to the Warp repo that resolves a script from this repository and forwards arguments to it.
-The wrapper's default path executes the raw GitHub script through `curl`:
+Client repositories do not need to vendor these scripts. They should keep a small `script/resolve_common_skills` shim that loads this repository's `scripts/resolve_common_skills` and forwards arguments to it.
+For example, a client repo's `script/resolve_common_skills` shim can look like this:
 ```sh
-curl -fsSL "https://raw.githubusercontent.com/warpdotdev/common-skills/${WARP_COMMON_SKILLS_REF:-main}/scripts/install_common_skills" | bash -s -- --repo-root "${REPO_ROOT}" --if-needed --prompt-for-target
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+COMMON_SKILLS_REPO="warpdotdev/common-skills"
+COMMON_SKILLS_REF="${WARP_COMMON_SKILLS_REF:-main}"
+RAW_BASE_URL="${WARP_COMMON_SKILLS_RAW_BASE_URL:-https://raw.githubusercontent.com/${COMMON_SKILLS_REPO}/${COMMON_SKILLS_REF}/scripts}"
+
+if [[ -n "${WARP_COMMON_SKILLS_SCRIPTS_DIR:-}" ]]; then
+  exec "${WARP_COMMON_SKILLS_SCRIPTS_DIR%/}/resolve_common_skills" "$@"
+fi
+
+curl -fsSL "${RAW_BASE_URL%/}/resolve_common_skills" | bash -s -- "$@"
 ```
-Warp's bootstrap and run scripts call the wrapper instead of calling `curl` directly:
+The shim's default path executes this repository's shared resolver through `curl`:
+```sh
+curl -fsSL "https://raw.githubusercontent.com/warpdotdev/common-skills/${WARP_COMMON_SKILLS_REF:-main}/scripts/resolve_common_skills" | bash -s -- install_common_skills -- --repo-root "${REPO_ROOT}" --if-needed --prompt-for-target
+```
+Consumer bootstrap and run scripts call the shim instead of calling `curl` directly:
 ```sh
 ./script/resolve_common_skills install_common_skills -- --repo-root "${REPO_ROOT}" --if-needed --prompt-for-target
 ```
