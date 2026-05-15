@@ -27,6 +27,22 @@ scripts/remove_common_skills --project
 ```
 ## Invoking from client repositories
 Client repositories do not need to vendor these scripts. They should keep a small `script/resolve_common_skills` shim that loads this repository's `scripts/resolve_common_skills` and forwards arguments to it.
+For example, a client repo's `script/resolve_common_skills` shim can look like this:
+```sh
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+COMMON_SKILLS_REPO="warpdotdev/common-skills"
+COMMON_SKILLS_REF="${WARP_COMMON_SKILLS_REF:-main}"
+RAW_BASE_URL="${WARP_COMMON_SKILLS_RAW_BASE_URL:-https://raw.githubusercontent.com/${COMMON_SKILLS_REPO}/${COMMON_SKILLS_REF}/scripts}"
+
+if [[ -n "${WARP_COMMON_SKILLS_SCRIPTS_DIR:-}" ]]; then
+  exec "${WARP_COMMON_SKILLS_SCRIPTS_DIR%/}/resolve_common_skills" "$@"
+fi
+
+curl -fsSL "${RAW_BASE_URL%/}/resolve_common_skills" | bash -s -- "$@"
+```
 The shim's default path executes this repository's shared resolver through `curl`:
 ```sh
 curl -fsSL "https://raw.githubusercontent.com/warpdotdev/common-skills/${WARP_COMMON_SKILLS_REF:-main}/scripts/resolve_common_skills" | bash -s -- install_common_skills -- --repo-root "${REPO_ROOT}" --if-needed --prompt-for-target
