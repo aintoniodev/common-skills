@@ -635,7 +635,10 @@ fail_if_global_lock_mismatch() {
 
   echo "error: global common skills are pinned to a different skills-lock.json than ${LOCK_FILE}." >&2
   echo "Another checkout may depend on the currently installed global common-skills version." >&2
-  echo "Explicitly reconcile the checkouts, update them to the same lock, or remove and reinstall the global common skills with scripts/remove_common_skills --repo-root ${REPO_ROOT} --global." >&2
+  echo "To reuse the installed global copy, update this checkout to the same skills-lock.json and rerun." >&2
+  echo "To keep this checkout's existing lock, rerun and choose project instead of global." >&2
+  echo "To replace the global copy, run this from the consuming repo and then rerun:" >&2
+  echo "  ./script/resolve_common_skills remove_common_skills -- --repo-root ${REPO_ROOT} --global" >&2
   exit 1
 }
 
