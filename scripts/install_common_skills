@@ -720,10 +720,14 @@ function collectFiles(baseDir, currentDir, results) {
 }
 
 function normalizeCrlf(content) {
+  // Git or platform tooling may rewrite checked-out text files as CRLF even
+  // though the lockfile hash was computed from LF-normalized repository data.
+  const carriageReturnByte = 13;
+  const lineFeedByte = 10;
   const normalized = [];
   for (let index = 0; index < content.length; index++) {
     const byte = content[index];
-    if (byte === 13 && content[index + 1] === 10) {
+    if (byte === carriageReturnByte && content[index + 1] === lineFeedByte) {
       continue;
     }
     normalized.push(byte);
@@ -758,6 +762,8 @@ function verifyTarget(skills, installTarget) {
     }
 
     const computedHash = computeSkillFolderHash(skillDir);
+    // Preserve exact-byte verification first, then allow an equivalent CRLF
+    // checkout to match the lockfile before reporting drift.
     const normalizedComputedHash =
       computedHash === skill.computedHash ? computedHash : computeSkillFolderHash(skillDir, true);
     if (normalizedComputedHash !== skill.computedHash) {
