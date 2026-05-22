@@ -468,6 +468,27 @@ locked_skills_installed() {
   fi
 }
 
+common_skills_already_up_to_date_without_target() {
+  local current_lock_hash=""
+  local project_stamp_hash=""
+  local global_stamp_hash=""
+
+  if [[ ! -f "${LOCK_FILE}" ]]; then
+    return 1
+  fi
+
+  fail_if_global_lock_mismatch
+
+  current_lock_hash="$(lock_hash)"
+  project_stamp_hash="$(stamp_hash "$(project_stamp_file)")"
+  global_stamp_hash="$(stamp_hash "$(global_stamp_file)")"
+  if [[ "${project_stamp_hash}" != "${current_lock_hash}" && "${global_stamp_hash}" != "${current_lock_hash}" ]]; then
+    return 1
+  fi
+
+  verify_common_skills >/dev/null 2>&1
+}
+
 install_project_from_source() {
   (
     cd "${REPO_ROOT}"
@@ -905,9 +926,13 @@ if [[ "${VERIFY_ONLY}" -eq 1 ]]; then
   verify_common_skills
   exit 0
 fi
-fail_if_target_requires_unavailable_prompt
 validate_install_dependencies
 maybe_prompt_for_upstream_lock_update
+if [[ "${FORCE}" -ne 1 && "${IF_NEEDED}" -eq 1 && -z "${TARGET}" ]] && common_skills_already_up_to_date_without_target; then
+  log "Common skills are already up to date."
+  exit 0
+fi
+fail_if_target_requires_unavailable_prompt
 if ! RESOLVED_TARGET="$(resolve_common_skills_target)"; then
   echo "error: could not resolve common skills install target" >&2
   usage >&2
