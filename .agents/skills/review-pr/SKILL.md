@@ -25,6 +25,9 @@ Review the current pull request and write the output to `review.json`.
 - Include style or nit comments only when you can provide a concrete suggestion block.
 - If a concern involves untouched code, mention it in top-level `body` instead of an inline comment.
 - Do not suggest adding test cases that only vary constructor inputs or struct fields when the existing test already covers the meaningful behavior. Only suggest new tests when they exercise a distinct code path or edge case.
+- Avoid requesting a new stored boolean/status field when the same state can be reliably derived from existing fields changed by the PR. Prefer derived state unless persistence is required for correctness, compatibility, or performance.
+- For public APIs and schemas that expose durations or elapsed time, prefer duration-native representations through the stack. In OpenAPI, flag raw integer durations when `type: string` with `format: duration` would avoid unit ambiguity and JavaScript number issues.
+- For billing, entitlement, or one-time upgrade flows, consider whether failing closed would incorrectly deny paid value. If the code logs and safely falls back to a broader grant with low abuse risk, do not automatically escalate that fallback as a correctness issue.
 - When a PR is clearly a V0 or initial implementation, frame robustness suggestions (timeouts, retries, lifecycle management) as optional future work rather than blocking concerns, unless they risk correctness, security, or data loss.
 
 ## Repository-specific guidance
