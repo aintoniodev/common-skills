@@ -238,6 +238,45 @@ Before finishing:
 python3 .agents/skills/pr-walkthrough/scripts/validate_d3_canvas.py --html .warp/pr-walkthrough/index.html --require-browser
 ```
 Do not report the walkthrough as ready if validation fails or cannot be performed in a browser-capable environment; fix the graph or report rendering as unverified.
+### 8. Optional public publishing with Cloudflare Pages
+By default, keep walkthrough artifacts under `.warp/pr-walkthrough/` and out of version control. If the user asks for a publicly accessible URL or a repeatable CLI publishing workflow, prefer Cloudflare Pages Direct Upload after the walkthrough has passed validation.
+Prerequisites:
+- The user needs a Cloudflare account.
+- For local interactive use, run Wrangler login once:
+```bash
+npx wrangler login
+```
+- Create the Pages project once, unless it already exists:
+```bash
+npx wrangler pages project create warp-pr-walkthroughs --production-branch main
+```
+Use the generated walkthrough directory as the upload root:
+```bash
+npx wrangler pages deploy .warp/pr-walkthrough \
+  --project-name warp-pr-walkthroughs \
+  --branch pr-<pr-number>-$(git rev-parse --short HEAD) \
+  --commit-dirty=true
+```
+For a stable “latest walkthrough” URL, deploy to the production branch instead:
+```bash
+npx wrangler pages deploy .warp/pr-walkthrough \
+  --project-name warp-pr-walkthroughs \
+  --branch main \
+  --commit-dirty=true
+```
+Wrangler prints both a deployment URL and, for non-production branch uploads, a deployment alias URL. Capture the URL from stdout and report it to the user. The production branch URL is normally:
+```text
+https://warp-pr-walkthroughs.pages.dev
+```
+Branch preview URLs normally use this shape:
+```text
+https://pr-<pr-number>-<sha>.warp-pr-walkthroughs.pages.dev
+```
+Important publishing caveats:
+- Newly created Cloudflare Pages projects may serve the production URL before preview-subdomain TLS has finished provisioning. If a preview URL fails in Chrome with `ERR_SSL_VERSION_OR_CIPHER_MISMATCH`, wait and retry, or deploy to `--branch main` and use the production URL for immediate sharing.
+- If `wrangler` warns that the working directory has uncommitted changes, pass `--commit-dirty=true` for generated `.warp/` artifacts that should not be committed.
+- For private code or sensitive PR context, do not publish to a public URL unless the user explicitly accepts that exposure. Use protected hosting, Cloudflare Access, or a local `file://` URL instead.
+- Post only the short public URL in PR comments; do not commit or embed the generated HTML artifact in the repository unless the user explicitly asks.
 ## Orientation heuristics
 When deciding what to highlight:
 - Emphasize the smallest set of points of interest reviewers need to understand the PR's purpose, design, architecture, and user impact.
@@ -261,4 +300,5 @@ Report:
 - The GitHub PR URL used for diff links.
 - Whether PR review comments were found and included.
 - Whether D3 canvas validation passed.
+- If published, the public Cloudflare Pages URL and whether it is a production URL or branch preview URL.
 - Any important caveats, missing specs, or validation that could not be performed.
