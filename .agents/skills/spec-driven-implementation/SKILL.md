@@ -133,6 +133,7 @@ Before considering the work complete, make sure verification maps back to the sp
 - Write specs to improve input quality for agents, not as ceremony.
 - Keep product specs behavior-oriented and implementation-light.
 - Keep tech specs implementation-oriented and grounded in current codebase patterns.
+- When a spec references relevant code chunks, include the inspected commit SHA in the file reference when possible and link the reference to the exact GitHub `blob/<sha>/...#Lx-Ly` lines.
 - Use review time to validate specs and behavior, not to over-index on code style nits.
 
 ## Related Skills

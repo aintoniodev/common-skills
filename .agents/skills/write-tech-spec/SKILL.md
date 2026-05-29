@@ -30,14 +30,15 @@ Prefer to have a `PRODUCT.md` first so the technical plan is anchored to agreed 
 ## Research before writing
 
 Before drafting, read the product spec (if any), inspect the relevant code, and identify the main files, types, data flow, and ownership boundaries. Do not guess about current architecture when the code can be inspected directly.
+When referencing relevant code chunks in the spec, prefer commit-pinned references so future readers can inspect the exact code you researched. Capture the current commit SHA for each repository you inspected (for example, `git rev-parse HEAD`) and, when possible, make file references Markdown links to the corresponding GitHub `blob/<sha>/...#Lx-Ly` URL. Use the linked text to keep the path readable in the spec.
 
 ## Structure
 
 Required sections:
 
 1. **Context** — What's being built, how the current system works in the area being changed, and the most relevant files with line references. Combine the "problem," "current state," and "relevant code" into one grounded section. Example references:
-   - `app/src/workspace/mod.rs:42` — entry point for the user flow
-   - `app/src/workspace/workspace.rs (120-220)` — state and event handling that will likely change
+   - [`app/src/workspace/mod.rs:42 @ <commit-sha>`](https://github.com/warpdotdev/warp/blob/<commit-sha>/app/src/workspace/mod.rs#L42) — entry point for the user flow
+   - [`app/src/workspace/workspace.rs (120-220) @ <commit-sha>`](https://github.com/warpdotdev/warp/blob/<commit-sha>/app/src/workspace/workspace.rs#L120-L220) — state and event handling that will likely change
    Reference `PRODUCT.md` for user-visible behavior rather than restating it.
 2. **Proposed changes** — The implementation plan: which modules change, new types/APIs/state being introduced, data flow, ownership boundaries, and how the design follows existing patterns. Call out tradeoffs when there is more than one reasonable path.
 3. **Testing and validation** — How the implementation will be verified against the product behavior. Owns everything about proving the feature works: unit tests, integration tests, manual steps, screenshots, videos, and any other verification. Reference the numbered Behavior invariants from `PRODUCT.md` directly rather than restating them; each important invariant should map to a concrete test or verification step. This section is where validation lives — `PRODUCT.md` intentionally does not have a Validation section.
@@ -75,6 +76,7 @@ If Context and Proposed changes end up describing the same files and state from 
 ## Writing guidance
 
 - Ground the plan in actual codebase structure and patterns.
+- Pin important code references to a commit SHA and link them to the corresponding GitHub lines when the repository has an accessible remote.
 - Prefer concrete implementation guidance over generic architecture language.
 - Explain why the proposed design fits this repo.
 - Reference `PRODUCT.md` for behavior instead of restating it.
