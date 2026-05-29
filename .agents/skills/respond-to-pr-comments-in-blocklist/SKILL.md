@@ -31,7 +31,7 @@ To identify the current GitHub user, prefer:
 GH_PAGER="" gh api user --jq .login
 ```
 
-For review threads, skip the original comment and the thread if a later reply in that thread was authored by the current GitHub user. Use `reply_metadata.parent_comment_id`, thread metadata, or comment ordering from the loaded context when available. For PR-level comments without explicit thread metadata, skip only when the loaded context clearly shows a current-user response to that specific comment, such as a direct reply, quote, link, or immediately following response that references it.
+For review threads, use `reply_metadata.parent_comment_id`, thread metadata, resolution state, and comment ordering from the loaded context when available. Skip the original comment and thread only when the thread is already resolved or when the latest relevant reply in that thread was authored by the current GitHub user. If a reviewer added a newer follow-up after the current user's reply, keep the thread in the walkthrough. For PR-level comments without explicit thread metadata, skip only when the loaded context clearly shows a current-user response to that specific comment, such as a direct reply, quote, link, or immediately following response that references it.
 
 If an automated or already-answered comment is skipped, keep a short internal skipped list with the comment URL and reason. Do not create decision records for skipped comments, do not include them in the per-comment walkthrough, and do not include them in the final GitHub reply/resolution preview except as a brief skipped-count summary.
 
@@ -178,33 +178,53 @@ Use the GitHub CLI only after approval. Clear the pager for all `gh` commands.
 
 Before running any GitHub CLI command that posts a reply or PR comment, verify the outgoing body begins with `[Warp Agent]`. If it does not, add the prefix before posting.
 
-For review comments, post replies with the REST API endpoint:
+For review comments, post replies with the REST API endpoint. Write the reply body to a temporary JSON file and pass it with `--input` instead of putting the response text directly in command-line arguments:
 
 ```sh
+REPLY_BODY_FILE="$(mktemp)"
+cat > "$REPLY_BODY_FILE"
+REPLY_PAYLOAD_FILE="$(mktemp)"
+python3 - "$REPLY_BODY_FILE" "$REPLY_PAYLOAD_FILE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+body_file = Path(sys.argv[1])
+payload_file = Path(sys.argv[2])
+payload_file.write_text(json.dumps({"body": body_file.read_text()}))
+PY
 GH_PAGER="" gh api \
   --method POST \
   /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies \
-  -f body="$REPLY_BODY"
+  --input "$REPLY_PAYLOAD_FILE"
+rm -f "$REPLY_BODY_FILE" "$REPLY_PAYLOAD_FILE"
 ```
 
 For PR-level comments or review-body comments that cannot be directly threaded, post a normal PR comment and quote or link to the original comment:
 
 ```sh
-GH_PAGER="" gh pr comment {pull_number} --body "$REPLY_BODY"
+REPLY_BODY_FILE="$(mktemp)"
+cat > "$REPLY_BODY_FILE"
+GH_PAGER="" gh pr comment {pull_number} --body-file "$REPLY_BODY_FILE"
+rm -f "$REPLY_BODY_FILE"
 ```
 
-To resolve review threads, use GraphQL. If the thread node ID is not already known, query review threads for the PR and map loaded comment IDs to their containing thread:
+To resolve review threads, use GraphQL. If the thread node ID is not already known, query all review threads for the PR and map loaded comment IDs to their containing thread. Use pagination so threads beyond the first 100 can still be resolved:
 
 ```sh
-GH_PAGER="" gh api graphql \
+GH_PAGER="" gh api graphql --paginate \
   -f owner="{owner}" \
   -f repo="{repo}" \
   -F number={pull_number} \
   -f query='
-    query($owner: String!, $repo: String!, $number: Int!) {
+    query($owner: String!, $repo: String!, $number: Int!, $endCursor: String) {
       repository(owner: $owner, name: $repo) {
         pullRequest(number: $number) {
-          reviewThreads(first: 100) {
+          reviewThreads(first: 100, after: $endCursor) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
             nodes {
               id
               isResolved
