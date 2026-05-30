@@ -1,20 +1,19 @@
 ---
 name: respond-to-pr-comments-in-blocklist
-description: Walk users through PR review comments already loaded into context, collect per-comment response decisions, apply requested fixes, and preview GitHub replies and resolutions before posting. Use after PR comments have been displayed with the built-in pr-comments skill or otherwise inserted into the agent context.
+description: Walk users through PR review comments, fetching and displaying them first when needed, collect per-comment response decisions, apply requested fixes, and preview GitHub replies and resolutions before posting. Use when responding to PR review comments on the current branch.
 ---
 
 # Respond to PR comments in blocklist
 
-Use this skill after PR comments are already visible in the conversation, typically from the built-in `/pr-comments` skill. The goal is to guide the user through each comment, collect an explicit decision, make requested code changes, and only then ask for approval before posting GitHub replies or resolving review threads.
+Use this skill to respond to PR comments on the current branch. If comments are already visible in the conversation, typically from the built-in `/pr-comments` skill, continue from that context. If comments are not already visible, fetch and display them first, then guide the user through each actionable comment, collect an explicit decision, make requested code changes, and only then ask for approval before posting GitHub replies or resolving review threads.
 
 ## Preconditions
 
-- PR comments have already been read into context, usually via `/pr-comments`.
 - Work in the repository checkout for the PR branch.
 - Do not refetch comments unless the loaded context is missing essential fields such as comment body, author, URL, path, or line metadata.
 - Do not post GitHub replies, submit reviews, or resolve threads until the final preview is approved by the user.
 
-If no PR comments are present in context, ask the user to run `/pr-comments` first or explicitly approve fetching comments.
+If no PR comments are present in context, fetch and display them before continuing. Prefer invoking the built-in `/pr-comments` workflow when available. Otherwise use the equivalent GitHub CLI fallback: identify the current PR, fetch PR-level comments, review comments, and review bodies, then display them with `insert_code_review_comments`. After displaying fetched comments, ask the user whether to continue with this response workflow before making changes.
 
 ## Comment filtering
 
@@ -106,7 +105,7 @@ Maintain an internal decision record for every comment. Each record should inclu
 - draft reply body
 - whether to resolve the review thread
 
-For draft replies, be concise and concrete. Prefer replies that say what changed or why the comment is intentionally not addressed. Prefix every draft reply that may be posted to GitHub with `[Warp Agent]` so reviewers can clearly see the response was agent-authored.
+For draft replies, be concise and concrete. Prefer replies that say what changed or why the comment is intentionally not addressed. Prefix every draft reply that may be posted to GitHub with `[Warp Agent]` so reviewers can clearly see the response was agent-authored. If the fix has already been committed and pushed before replies are posted, include a link to the commit that resolved the comment so the response is auditable.
 
 ## Applying fixes
 
@@ -161,6 +160,7 @@ After the commit/push decision is complete, and before posting anything to GitHu
 - comment URL or short identifier
 - action: reply only, resolve only, reply and resolve, or no GitHub action
 - reply body
+- commit link, when a pushed commit exists for the fix
 - validation relevant to that comment
 
 Then call `ask_user_question` to ask whether to proceed:
