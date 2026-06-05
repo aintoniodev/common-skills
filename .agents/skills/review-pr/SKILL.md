@@ -26,6 +26,9 @@ Review the current pull request and write the output to `review.json`.
 - If a concern involves untouched code, mention it in top-level `body` instead of an inline comment.
 - Do not suggest adding test cases that only vary constructor inputs or struct fields when the existing test already covers the meaningful behavior. Only suggest new tests when they exercise a distinct code path or edge case.
 - When a PR is clearly a V0 or initial implementation, frame robustness suggestions (timeouts, retries, lifecycle management) as optional future work rather than blocking concerns, unless they risk correctness, security, or data loss.
+- Before claiming that a symbol, function, or pattern is missing or does not exist, verify against the full file and surrounding code — not just the lines in the diff.
+- When reviewing optimization or heuristic code (caches, early exits, approximate checks), calibrate severity to the tolerance of the use case. Do not treat an imperfect optimization as a correctness bug.
+- Do not suggest switching to fields, APIs, or resources that may depend on external infrastructure (e.g. Terraform, cloud-provisioned schemas) without confirming they are available in the current environment.
 
 ## Repository-specific guidance
 
