@@ -181,7 +181,7 @@ Mark these with `[TODO: docs reviewer — ...]` in the draft:
 
 ## No-spec fallback
 
-If `specs/<id>/PRODUCT.md` and `specs/<id>/TECH.md` don't exist, use `Ask_User_Question` to interview the engineer. Ask about:
+If `specs/<id>/PRODUCT.md` and `specs/<id>/TECH.md` don't exist, use `ask_user_question` to interview the engineer. Ask about:
 
 1. What this feature does in one sentence
 2. The 2–3 most important things a user can do with it
