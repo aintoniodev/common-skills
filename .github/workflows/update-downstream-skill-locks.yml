@@ -25,7 +25,7 @@ jobs:
             base_branch: develop
     steps:
       - name: Check out common-skills
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           path: common-skills
           persist-credentials: false
@@ -61,7 +61,7 @@ jobs:
 
       - name: Generate target GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ vars.COMMON_SKILLS_SYNC_APP_ID }}
           private-key: ${{ secrets.COMMON_SKILLS_SYNC_APP_PRIVATE_KEY }}
@@ -71,7 +71,7 @@ jobs:
           permission-pull-requests: write
 
       - name: Check out target repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: ${{ matrix.repository }}
           ref: ${{ matrix.base_branch }}
@@ -92,7 +92,7 @@ jobs:
       - name: Create downstream pull request
         if: steps.update.outputs.changed == 'true'
         id: create-pr
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ steps.app-token.outputs.token }}
           path: target
