@@ -5,7 +5,7 @@ description: Scan warp-internal and warp-server for recently merged PRODUCT.md s
 
 # scan-new-specs
 
-Scan `warp-internal` and `warp-server` for recently merged specs that lack a corresponding docs draft, and post a Slack nudge to `#growth-docs` for each gap. This is the automated companion to the `write-feature-docs` skill — it surfaces docs gaps so the docs team can follow up with the engineer, without requiring engineers to remember to kick off the docs-drafting workflow themselves.
+Scan `warp-internal` and `warp-server` for recently merged product or tech specs that lack a corresponding docs draft, and post a Slack nudge to `#growth-docs` for each gap. This is the automated companion to the `write-feature-docs` skill — it surfaces docs gaps so the docs team can follow up with the engineer, without requiring engineers to remember to kick off the docs-drafting workflow themselves.
 
 ## Configuration
 
