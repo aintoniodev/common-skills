@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+REPO_ROOT="$(pwd)"
+LOCK_FILE=""
+TEMP_DIR=""
+SKILLS_CLI_VERSION="1.5.6"
+COMMON_SKILLS_SOURCE="warpdotdev/common-skills"
+SKILLS_CLI_AGENT="warp"
+COMMON_SKILL_SELECTOR="*"
+
+usage() {
+  cat <<EOF
+Usage: scripts/update_common_skills_lock [options]
+
+Regenerate an existing skills-lock.json from warpdotdev/common-skills.
+
+Options:
+  --repo-root <path>   Repository containing skills-lock.json.
+  -h, --help           Show this help message.
+EOF
+}
+
+cleanup() {
+  if [[ -n "${TEMP_DIR}" ]]; then
+    rm -rf "${TEMP_DIR}"
+  fi
+}
+
+validate_required_commands() {
+  local missing=0
+  local tool=""
+
+  for tool in "$@"; do
+    if ! command -v "${tool}" >/dev/null 2>&1; then
+      echo "error: required command '${tool}' is not installed or not on PATH." >&2
+      missing=1
+    fi
+  done
+
+  if [[ "${missing}" -eq 1 ]]; then
+    exit 1
+  fi
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --repo-root)
+      if [[ $# -lt 2 ]]; then
+        echo "error: --repo-root requires a path." >&2
+        usage >&2
+        exit 1
+      fi
+      REPO_ROOT="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "error: unrecognized argument: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+validate_required_commands git node npm npx
+
+if ! REPO_ROOT="$(cd "${REPO_ROOT}" && pwd)"; then
+  echo "error: repository root does not exist: ${REPO_ROOT}" >&2
+  exit 1
+fi
+
+LOCK_FILE="${REPO_ROOT}/skills-lock.json"
+if [[ ! -f "${LOCK_FILE}" ]]; then
+  echo "error: missing skills lock file: ${LOCK_FILE}" >&2
+  exit 1
+fi
+
+trap cleanup EXIT
+TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/common-skills-lock.XXXXXX")"
+cp "${LOCK_FILE}" "${TEMP_DIR}/skills-lock.json"
+git -C "${TEMP_DIR}" init --quiet
+
+if ! (
+  cd "${TEMP_DIR}"
+  npx --yes "skills@${SKILLS_CLI_VERSION}" add "${COMMON_SKILLS_SOURCE}" -a "${SKILLS_CLI_AGENT}" -s "${COMMON_SKILL_SELECTOR}" -y --copy
+) < /dev/null; then
+  echo "error: failed to generate an updated skills-lock.json from ${COMMON_SKILLS_SOURCE}." >&2
+  exit 1
+fi
+
+if [[ ! -f "${TEMP_DIR}/skills-lock.json" ]]; then
+  echo "error: common skills update did not produce a candidate skills-lock.json." >&2
+  exit 1
+fi
+
+if cmp -s "${LOCK_FILE}" "${TEMP_DIR}/skills-lock.json"; then
+  echo "skills-lock.json is already up to date."
+  exit 0
+fi
+
+cp "${TEMP_DIR}/skills-lock.json" "${LOCK_FILE}"
+echo "Updated ${LOCK_FILE}."

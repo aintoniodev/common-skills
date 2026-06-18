@@ -3,6 +3,7 @@ These scripts help consuming repositories install, remove, and verify shared age
 ## Files
 - `resolve_common_skills`: resolves and executes scripts from this directory, a local override directory, or raw GitHub.
 - `install_common_skills`: installs or updates common skills, then verifies the installed contents.
+- `update_common_skills_lock`: regenerates an existing common-skills lockfile without installing skills.
 - `remove_common_skills`: removes installed common skills from a selected target.
 ## Quick start
 Install common skills into the current checkout:
@@ -91,6 +92,18 @@ The script supports:
 Successful install and skip paths verify that exactly one install target contains the locked common skills and that each installed skill matches `skills-lock.json`.
 Project installs add local Git exclude entries for only the locked common-skill directories so unrelated project skills in `.agents/skills` remain visible to Git.
 Global installs are shared across client repositories. A second repo pinned to the same lock verifies and succeeds without unnecessarily reinstalling; a repo pinned to a different lock fails with a version-mismatch error instead of overwriting the shared global install.
+## Update lock script
+`update_common_skills_lock` non-interactively regenerates an existing `skills-lock.json` from the default branch of `warpdotdev/common-skills` without installing skills into the target repository.
+It generates a candidate in a temporary Git repository, then copies back only a changed `skills-lock.json`. Generator failures and missing candidate output fail the command instead of retaining the existing lock.
+Run it from a consuming repository:
+```sh
+/path/to/common-skills/scripts/update_common_skills_lock --repo-root /path/to/consumer
+```
+The downstream lockfile update workflow uses this command before opening lockfile-only pull requests.
+## Downstream lockfile workflow
+`.github/workflows/update-downstream-skill-locks.yml` runs after every push to `main` and opens lockfile-only pull requests against `warpdotdev/warp` and `warpdotdev/warp-server` when their locks change.
+Each pull request requests the author of the originating common-skills pull request when possible and enables squash auto-merge. Direct pushes and authors who cannot review a target repository do not prevent pull request creation.
+The workflow requires a dedicated GitHub App installed on both downstream repositories with contents and pull-request write access. Configure its App ID as the `COMMON_SKILLS_SYNC_APP_ID` Actions variable and its private key as the `COMMON_SKILLS_SYNC_APP_PRIVATE_KEY` Actions secret in `common-skills`.
 ## Remove script
 `remove_common_skills` removes common agent skills listed in `skills-lock.json`.
 The script supports:

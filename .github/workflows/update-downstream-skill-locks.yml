@@ -1,0 +1,137 @@
+name: Update downstream common-skills lockfiles
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  update-lockfile:
+    name: Update ${{ matrix.repository }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - repository: warpdotdev/warp
+            repository_name: warp
+            base_branch: master
+          - repository: warpdotdev/warp-server
+            repository_name: warp-server
+            base_branch: develop
+    steps:
+      - name: Check out common-skills
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          path: common-skills
+          persist-credentials: false
+
+      - name: Resolve source pull request
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          source_pr="$(
+            gh api "repos/${SOURCE_REPOSITORY}/commits/${SOURCE_SHA}/pulls" \
+              --jq '[.[] | select(.merged_at != null and .base.ref == "main")][0] // {}'
+          )"
+          source_pr_number="$(jq -r '.number // empty' <<< "${source_pr}")"
+          source_pr_author="$(jq -r '.user.login // empty' <<< "${source_pr}")"
+          source_pr_url="$(jq -r '.html_url // empty' <<< "${source_pr}")"
+
+          if [[ -n "${source_pr_number}" ]]; then
+            {
+              echo "author=${source_pr_author}"
+              echo "label=warpdotdev/common-skills#${source_pr_number}"
+              echo "url=${source_pr_url}"
+            } >> "${GITHUB_OUTPUT}"
+          else
+            {
+              echo "author="
+              echo "label=${SOURCE_SHA}"
+              echo "url=https://github.com/${SOURCE_REPOSITORY}/commit/${SOURCE_SHA}"
+            } >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Generate target GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
+        with:
+          app-id: ${{ vars.COMMON_SKILLS_SYNC_APP_ID }}
+          private-key: ${{ secrets.COMMON_SKILLS_SYNC_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ matrix.repository_name }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Check out target repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          repository: ${{ matrix.repository }}
+          ref: ${{ matrix.base_branch }}
+          path: target
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
+
+      - name: Update target lockfile
+        id: update
+        run: |
+          common-skills/scripts/update_common_skills_lock --repo-root target
+          if git -C target diff --quiet -- skills-lock.json; then
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Create downstream pull request
+        if: steps.update.outputs.changed == 'true'
+        id: create-pr
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          path: target
+          add-paths: skills-lock.json
+          base: ${{ matrix.base_branch }}
+          branch: automation/common-skills-lock-${{ github.sha }}
+          delete-branch: true
+          commit-message: Update common skills lock for ${{ steps.source.outputs.label }}
+          title: Update common skills lock for ${{ steps.source.outputs.label }}
+          body: |
+            ## Description
+
+            Updates `skills-lock.json` to distribute the common skills from [${{ steps.source.outputs.label }}](${{ steps.source.outputs.url }}).
+
+            ## Testing
+
+            Generated with `scripts/update_common_skills_lock`.
+
+      - name: Request source author as reviewer
+        if: steps.create-pr.outputs.pull-request-number != '' && steps.source.outputs.author != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PULL_REQUEST_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
+          REVIEWER: ${{ steps.source.outputs.author }}
+          TARGET_REPOSITORY: ${{ matrix.repository }}
+        run: |
+          if gh api \
+            --method POST \
+            "repos/${TARGET_REPOSITORY}/pulls/${PULL_REQUEST_NUMBER}/requested_reviewers" \
+            -f "reviewers[]=${REVIEWER}" >/dev/null; then
+            echo "Requested ${REVIEWER} as reviewer."
+          else
+            echo "::warning::Could not request ${REVIEWER} as reviewer; the pull request remains open."
+          fi
+
+      - name: Enable squash auto-merge
+        if: steps.create-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PULL_REQUEST_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
+          TARGET_REPOSITORY: ${{ matrix.repository }}
+        run: gh pr merge "${PULL_REQUEST_NUMBER}" --repo "${TARGET_REPOSITORY}" --auto --squash
