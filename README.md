@@ -39,6 +39,11 @@ Each skill lives in its own directory under `.agents/skills/`. The only required
 - `review-pr` — produces structured PR review feedback from local diff artifacts.
 - `check-impl-against-spec` — compares PR implementation changes against provided spec context during review.
 
+### Investigation and decision-making
+
+- `research` — delegates low signal-to-noise-ratio research work to subagents and returns distilled, evidence-backed findings.
+- `cross-critique` — sharpens contested decisions by having agents critique one another's independent proposals before synthesis.
+
 ### Skill authoring
 
 - `update-skill` — guidance for creating and maintaining skill directories and `SKILL.md` files.
