@@ -73,6 +73,8 @@ Evaluate the size, ambiguity, and risk of the work. If specs will not meaningful
 
 Do not assume `PRODUCT.md` comes first or that both documents are required. Choose no spec, `PRODUCT.md` only, `TECH.md` only, or both using the independent-value and semantic-preservation tests above.
 
+Present the chosen artifact set and a brief rationale to the user or another explicitly identified human approver, and get explicit approval before proceeding with the selected path.
+
 Treat the approved artifact set as part of the reviewed plan. Route any later artifact-selection review back through this workflow while implementation consumes the settled artifact set.
 
 ### 3. Write and approve the selected specs
@@ -91,6 +93,8 @@ Use the `write-tech-spec` skill when the selected artifact set includes `TECH.md
 
 It is acceptable to write the tech spec after an e2e prototype if that leads to a more accurate implementation plan. Do not force a premature tech spec when the implementation details are still too uncertain.
 
+After the selected specs are drafted, present the material decisions, important tradeoffs, and unresolved questions. Ask the user or another explicitly identified human approver to resolve or explicitly defer every question that would affect implementation, then get explicit approval for the specs before implementation begins.
+
 ### 4. Implement approved specs
 
 After the warranted specs are approved, use the `implement-specs` skill to build from whichever approved documents exist.
@@ -108,7 +112,9 @@ These are optional aids, not required outputs.
 
 ### 5. Keep specs current during implementation
 
-If implementation reveals that approved behavior or design should materially change, surface the change for re-review before updating the spec. Apply routine edits that only keep the approved intent current rather than leaving the spec stale.
+A material change alters an approved behavior, guarantee, architectural decision, scope boundary, risk or rollout assumption, or validation expectation. A routine edit records factual implementation detail or clarifies wording while preserving every approved decision.
+
+When implementation reveals a proposed material change, describe its impact and get explicit approval from the user or another explicitly identified human approver before persisting it in the specs or acting on it in the implementation. Ask when the distinction between material and routine is unclear. Apply routine edits that keep the approved intent current.
 
 Update `PRODUCT.md`, when it exists, when:
 
@@ -125,7 +131,7 @@ Update `TECH.md`, when it exists, when:
 
 The checked-in specs should describe the change that actually ships, not just the initial intent. Keep those spec updates in the same PR as the related code changes whenever practical.
 
-If evolving design calls the approved artifact set into question, return to the artifact-selection step. Explain the proposed artifact set, show how every durable guarantee remains represented, and get explicit confirmation from the user or accountable spec owner before changing the approved artifact set.
+If evolving design calls the approved artifact set into question, return to the artifact-selection step. Explain the proposed artifact set, show how every durable guarantee remains represented, and get explicit confirmation from the user or another explicitly identified human approver before changing the approved artifact set.
 
 ### 6. Verify behavior against the spec
 

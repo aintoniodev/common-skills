@@ -20,7 +20,10 @@ In many cases, the implementation should be pushed in the same PR as the applica
 Before using this skill:
 
 - identify and read every approved spec relevant to the change
-- confirm that at least one approved spec exists and has been reviewed and approved enough to start implementation
+- confirm that at least one approved spec exists and has explicit approval to start implementation
+- confirm that every implementation-blocking open question has been resolved or explicitly deferred by the user or another explicitly identified human approver
+
+If the approval or disposition of an implementation-blocking question is not evident from the current context, ask before writing code.
 
 ## Workflow
 
@@ -50,7 +53,9 @@ Use the same PR for the specs and implementation when practical so the full evol
 
 ### 4. Update specs as the implementation evolves
 
-If implementation reveals that approved behavior or design should materially change, surface the change for re-review before updating the checked-in specs. Apply routine edits that only keep the approved intent current rather than letting the specs go stale.
+A material change alters an approved behavior, guarantee, architectural decision, scope boundary, risk or rollout assumption, or validation expectation. A routine edit records factual implementation detail or clarifies wording while preserving every approved decision.
+
+When implementation reveals a proposed material change, describe its impact and get explicit approval from the user or another explicitly identified human approver before persisting it in the checked-in specs or acting on it in the implementation. Ask when the distinction between material and routine is unclear. Apply routine edits that keep the approved intent current.
 
 In particular:
 
@@ -74,7 +79,7 @@ Map each important approved commitment to at least one concrete verification ste
 
 - Keep specs and code synchronized throughout implementation.
 - Treat the approved artifact set as settled input during implementation and surface material conflicts for review.
-- Prefer updating the spec immediately when decisions change rather than batching spec cleanup until the end.
+- Record approved material decisions in the applicable specs promptly.
 - Use optional tracking documents only when they add real value for a complex feature.
 - Keep the same PR coherent: spec updates, code changes, tests, and optional tracking docs should all support the same change narrative.
 

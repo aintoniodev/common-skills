@@ -89,11 +89,15 @@ If Context and Proposed changes end up describing the same files and state from 
 - Treat every approved companion spec as input; artifact-set changes belong in `spec-driven-implementation`.
 - Each section should earn its place — if a section would repeat another or contain only boilerplate, omit it.
 
+## Approval handoff
+
+After drafting, present a concise summary of the material decisions, important tradeoffs, and unresolved questions. When called by `spec-driven-implementation`, return this handoff so that workflow can coordinate approval across the selected specs. When called directly, ask the user or another explicitly identified human approver to resolve or explicitly defer every question that would affect implementation, then ask them to approve the spec or request revisions before it is treated as ready for implementation.
+
 ## Keep the spec current
 
 Approved specs may ship in the same PR as the implementation. Update `TECH.md` in the same PR when module boundaries, implementation sequencing, risks, validation strategy, or rollout assumptions change. The checked-in spec should describe the implementation that actually ships.
 
-Surface material design or contract changes for re-review. Treat the approved artifact set as settled while using this skill and return to `spec-driven-implementation` to revisit it; routine edits that keep the approved design current do not require renewed approval.
+Present proposed material design or contract changes to the user or another explicitly identified human approver and get explicit approval before updating the approved spec. Treat the approved artifact set as settled while using this skill and return to `spec-driven-implementation` to revisit it; routine edits that keep the approved design current do not require renewed approval.
 
 For large features, the implementer may optionally keep a `DECISIONS.md` file summarizing concrete decisions. Offer it when it would help future agents; otherwise skip it.
 

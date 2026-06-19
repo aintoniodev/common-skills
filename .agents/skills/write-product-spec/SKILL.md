@@ -111,11 +111,15 @@ If you find yourself writing the same idea in Summary, Problem, Goals, and Behav
 - Avoid implementation details unless unavoidable for the UX.
 - Each section should earn its place — if a section would repeat another or contain only boilerplate, omit it.
 
+## Approval handoff
+
+After drafting, present a concise summary of the material decisions and unresolved questions. When called by `spec-driven-implementation`, return this handoff so that workflow can coordinate approval across the selected specs. When called directly, ask the user or another explicitly identified human approver to resolve or explicitly defer every question that would affect implementation, then ask them to approve the spec or request revisions before it is treated as ready for implementation.
+
 ## Keep the spec current
 
 Approved specs may ship in the same PR as the implementation. As implementation evolves, update `PRODUCT.md` in the same PR when user-facing behavior, UX details, public contracts, or deliberately stable cross-team contracts change. The checked-in spec should describe the feature that actually ships.
 
-If evolving design changes the document's value, keep `PRODUCT.md` current for its approved behavior and return to `spec-driven-implementation` to revisit artifact selection. Surface material behavior changes for re-review; routine edits that keep the approved intent current do not require renewed approval.
+If evolving design changes the document's value, keep `PRODUCT.md` current for its approved behavior and return to `spec-driven-implementation` to revisit artifact selection. Present proposed material behavior changes to the user or another explicitly identified human approver and get explicit approval before updating the approved spec; routine edits that keep the approved intent current do not require renewed approval.
 
 For large features, the implementer may optionally keep a `DECISIONS.md` file summarizing concrete decisions made during design and implementation. Offer it when it would help future agents; otherwise skip it.
 

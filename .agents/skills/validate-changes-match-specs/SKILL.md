@@ -26,7 +26,7 @@ Prefer repository conventions when known. Otherwise:
 - Use `main`, `master`, or `develop` only when that is clearly the repository's base branch.
 - Use `git merge-base` and `git diff --name-only <base>...HEAD` to find files introduced or modified by the branch.
 
-Look for specs introduced or modified by the change, especially under `specs/`.
+Start with specs introduced or modified by the change, especially under `specs/`. For every relevant `specs/<id>/` directory, also read its approved sibling specs, including siblings that the current change did not modify.
 
 Common spec names include:
 
@@ -37,9 +37,9 @@ Common spec names include:
 - `SECURITY.md`
 - `security.md`
 
-Treat any markdown file bundled under a relevant `specs/<id>/` directory as a valid spec candidate. The id may be a ticket, issue, or feature name. Examples include focused specs such as `MIGRATION.md`, `ROLLBACK.md`, `PRIVACY.md`, `API.md`, or `TESTING.md`.
+Treat a file as authoritative when the available evidence identifies it as an approved source of commitments. Focused supplemental specs may include `MIGRATION.md`, `ROLLBACK.md`, `PRIVACY.md`, `API.md`, or `TESTING.md`. Treat other markdown files in a relevant `specs/<id>/` directory as supporting context. If a document's approval status is unclear, ask before treating its contents as commitments. The id may be a ticket, issue, or feature name.
 
-If no specs were introduced or modified, look for existing specs referenced by the PR description, commit messages, branch name, changed files, or nearby `specs/` directories. If there is still no relevant spec, stop and report that there is no spec to validate against.
+Also look for existing specs referenced by the PR description, commit messages, branch name, changed files, or nearby `specs/` directories. If there is still no relevant spec, stop and report that there is no spec to validate against.
 
 ## Context gathering
 
@@ -81,7 +81,6 @@ Use the same `ask_user_question` flow for these inconsistencies. For review-comm
 - Append a follow-up comment explaining why the implementation is being left as-is.
 - Explain this inconsistency before deciding.
 - Acknowledge without changes.
-- `Other...`
 
 If the user chooses to append a follow-up comment, draft the comment for approval before posting it. Do not post GitHub comments without explicit approval. Prefix agent-authored follow-up comments with `[Warp Agent]`.
 
@@ -123,7 +122,6 @@ Call `ask_user_question` with options like:
 
 - `Launch cloud computer-use agents to validate product behavior`
 - `Skip cloud computer-use validation`
-- `Other...`
 
 If the user chooses cloud validation, launch multiple Oz cloud agents with computer use enabled as part of this validation flow. Split the product spec's user-visible behaviors into independent validation assignments, such as one child agent per major flow, user role, platform, or acceptance-criteria group. Each child agent should receive:
 
@@ -178,9 +176,6 @@ When mismatches exist, the first `ask_user_question` call must ask how the user 
 
 - `Resolve one-by-one`
 - `Collect all decisions, then apply in a batch`
-- `Other...`
-
-Every `ask_user_question` call in this skill must include an `Other...` option for custom instructions.
 
 ### One-by-one mode
 
@@ -206,7 +201,6 @@ For each mismatch, call `ask_user_question` with options tailored to the specifi
 - Update the spec to match the implementation.
 - Explain this mismatch before deciding.
 - Acknowledge without changes.
-- `Other...`
 
 When the user selects explanation, provide concise context about why the mismatch exists, what would change under each resolution path, and any risk or review implications. Then ask about the same mismatch again.
 
@@ -244,7 +238,6 @@ Call `ask_user_question` with options like:
 - `Commit only`
 - `Commit and push to origin`
 - `Do not commit`
-- `Other...`
 
 If the user chooses to commit:
 
