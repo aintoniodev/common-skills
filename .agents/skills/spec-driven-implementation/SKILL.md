@@ -1,6 +1,6 @@
 ---
 name: spec-driven-implementation
-description: Drives a pragmatic spec-first workflow by choosing among no spec, PRODUCT.md only, standalone TECH.md with behavioral guarantees, or both. Use when starting significant feature or hardening work, planning agent-driven implementation, or deciding which specs should be checked into source control.
+description: Drives a pragmatic spec-first workflow by choosing among no spec, PRODUCT.md only, standalone TECH.md with technical safety and preservation guarantees, or both. Use when starting significant feature or hardening work, planning agent-driven implementation, or deciding which specs should be checked into source control.
 ---
 
 # spec-driven-implementation
@@ -13,17 +13,18 @@ Use this skill for significant work where a written spec will improve implementa
 
 Specs may live in:
 
-- `specs/<linear-ticket-number>/PRODUCT.md`
-- `specs/<linear-ticket-number>/TECH.md`
+- `specs/<id>/PRODUCT.md`
+- `specs/<id>/TECH.md`
 
-For example:
+Use a Linear ticket number, `gh-`-prefixed GitHub issue id, or short kebab-case feature name as `<id>`. For example:
 
 - `specs/APP-1234/PRODUCT.md`
-- `specs/APP-1234/TECH.md`
+- `specs/gh-4567/TECH.md`
+- `specs/vertical-tabs-hover-sidecar/TECH.md`
 
-`specs/` should contain only ticket-named directories as direct children. Do not create engineer-named subdirectories or feature-slug directories there.
+`specs/` should contain only id-named directories as direct children. Do not create engineer-named subdirectories there.
 
-Use a relevant Linear issue when one already exists. Only create one when the user explicitly asks; in that case use the Linear MCP tools directly:
+Use a relevant Linear or GitHub issue when one already exists. If none exists, ask the user for a short feature name. Only create an issue when the user explicitly asks; use the Linear MCP tools or `gh` CLI respectively. For Linear:
 
 - `list_teams` to find the appropriate team
 - `list_issue_labels` to inspect the expected labels/tags
@@ -33,7 +34,7 @@ If the correct team or labels are not obvious from the request and surrounding c
 
 Specs should largely be written by agents, not by hand, and should be checked into source control when their ongoing review value exceeds the cost of keeping them current with the code.
 
-## When specs are required
+## When specs add value
 
 Strongly prefer specs when the change is substantial, such as:
 
@@ -54,11 +55,13 @@ For pure UI changes, the product spec is often useful while the tech spec may be
 Choose the smallest document set that adds independent value:
 
 - **No spec** — Small, clear work that is better captured by the issue, code, and tests.
-- **`PRODUCT.md` only** — Meaningful user-facing or public-contract behavior is ambiguous, but implementation is straightforward.
-- **`TECH.md` only** — Internal hardening, a bug fix, refactor, migration, lifecycle/concurrency work, or other technically complex change that preserves existing product semantics. Include a concise `Behavioral guarantees` section.
+- **`PRODUCT.md` only** — Meaningful user-facing, public-contract, or deliberately stable cross-team consumer behavior is ambiguous, but implementation is straightforward.
+- **`TECH.md` only** — Internal hardening, a bug fix, refactor, migration, lifecycle/concurrency work, or another technically complex change whose relevant consumer semantics remain unchanged. Include concise `Technical safety and preservation guarantees`.
 - **Both** — Product behavior and technical design each contain meaningful, independently reviewable decisions.
 
 Technical size or cross-cutting scope alone is not a reason to create `PRODUCT.md`.
+
+Before choosing an artifact set without `PRODUCT.md`, state in one sentence whether user-visible, public, and deliberately stable cross-team consumer semantics — including failure and recovery behavior — change. If they change, explain briefly why the independent-value test still does not warrant a product spec; small, obvious changes may still need no spec. Task labels such as "bug fix," "refactor," and "hardening" are not evidence that semantics remain unchanged.
 
 ## Workflow
 
@@ -66,32 +69,25 @@ Technical size or cross-cutting scope alone is not a reason to create `PRODUCT.m
 
 Evaluate the size, ambiguity, and risk of the work. If specs will not meaningfully improve execution or review, skip them and focus on verification instead.
 
-### 2. Choose and write only the warranted specs
+### 2. Choose the artifact set
 
-Do not assume `PRODUCT.md` comes first or that both documents are required.
+Do not assume `PRODUCT.md` comes first or that both documents are required. Choose no spec, `PRODUCT.md` only, `TECH.md` only, or both using the independent-value and semantic-preservation tests above.
 
-Use the `write-product-spec` skill only when the product behavior has independent review value. The product spec should define:
+Treat the approved artifact set as part of the reviewed plan. Implementation may flag that an approved document has become redundant, but must not delete or reclassify it without explicit confirmation from the user or accountable spec owner.
+
+### 3. Write and approve the selected specs
+
+Use the `write-product-spec` skill only when consumer behavior has independent review value. The product spec should define:
 
 - what problem is being solved
-- the desired user experience
-- meaningful product invariants and user-visible edge cases
+- the desired user experience or consumer contract
+- meaningful product invariants and consumer-visible edge cases
 
 If the work has UI or interaction design, ask for a Figma mock if one exists. If there is no mock, continue but call that out explicitly in the product spec.
 
-Reference the Linear issue in the spec when one exists. Because specs live under `specs/<linear-ticket-number>/...`, this should usually be straightforward.
+Reference the Linear or GitHub issue in the spec when one exists.
 
-For technically complex work that preserves existing product semantics, skip `PRODUCT.md` and use a standalone `TECH.md` with concise behavioral guarantees.
-
-### 3. Write the tech spec when warranted
-
-Use the `write-tech-spec` skill for substantial or ambiguous implementation work.
-
-Prefer a tech spec when:
-
-- the implementation spans multiple subsystems
-- architecture or extensibility matters
-- there are meaningful tradeoffs to document
-- reviewers will benefit more from reviewing the plan than the raw code
+Use the `write-tech-spec` skill when the selected artifact set includes `TECH.md`. Prefer a tech spec when the implementation spans multiple subsystems, architecture or extensibility matters, there are meaningful tradeoffs to document, or reviewers will benefit more from reviewing the plan than the raw code.
 
 It is acceptable to write the tech spec after an e2e prototype if that leads to a more accurate implementation plan. Do not force a premature tech spec when the implementation details are still too uncertain.
 
@@ -100,6 +96,8 @@ It is acceptable to write the tech spec after an e2e prototype if that leads to 
 After the warranted specs are approved, use the `implement-specs` skill to build from whichever approved documents exist.
 
 The implementation can often be pushed in the same PR as the specs. As the engineer iterates, keep the applicable specs, code changes, and tests in that same PR so the review reflects the change that will actually ship.
+
+For PRODUCT-only work, keep a lightweight map from important product behavior to concrete verification in the implementation plan or PR rather than adding a testing section to `PRODUCT.md`.
 
 For large features, the implementer may optionally offer:
 
@@ -110,7 +108,7 @@ These are optional aids, not required outputs.
 
 ### 5. Keep specs current during implementation
 
-If implementation changes from the spec, update the spec rather than leaving it stale.
+If implementation reveals that approved behavior or design should materially change, surface the change for re-review before updating the spec. Apply routine edits that only keep the approved intent current rather than leaving the spec stale.
 
 Update `PRODUCT.md`, when it exists, when:
 
@@ -127,11 +125,11 @@ Update `TECH.md`, when it exists, when:
 
 The checked-in specs should describe the change that actually ships, not just the initial intent. Keep those spec updates in the same PR as the related code changes whenever practical.
 
-If a spec stops adding independent value as the design evolves, consolidate any durable guarantees into the remaining source of truth and remove the redundant document rather than maintaining two synchronized copies.
+If a spec stops adding independent value as the design evolves, propose consolidating any durable guarantees into the remaining source of truth. Get explicit confirmation from the user or accountable spec owner before deleting or reclassifying an approved spec.
 
 ### 6. Verify behavior against the spec
 
-Before considering the work complete, make sure verification maps back to the applicable specs. Prefer tests and artifacts that validate the product behavior or standalone behavioral guarantees directly:
+Before considering the work complete, make sure verification maps back to the applicable specs and guarantees, or to the lightweight validation map for PRODUCT-only work. Prefer tests and artifacts that validate the product behavior or technical safety and preservation guarantees directly:
 
 - unit tests and regression coverage that follow the repository's local testing conventions
 - integration tests for critical user flows
@@ -144,7 +142,7 @@ Before considering the work complete, make sure verification maps back to the ap
 - Write specs to improve input quality for agents, not as ceremony.
 - Choose document types based on independent review value, not implementation size alone.
 - Keep product specs behavior-oriented and implementation-light.
-- Keep tech specs implementation-oriented and grounded in current codebase patterns; use concise behavioral guarantees when no product spec is warranted.
+- Keep tech specs implementation-oriented and grounded in current codebase patterns; use concise technical safety and preservation guarantees when they add independent value.
 - When a spec references relevant code chunks, include the inspected commit SHA in the file reference when possible and link the reference to the exact GitHub `blob/<sha>/...#Lx-Ly` lines.
 - Use review time to validate specs and behavior, not to over-index on code style nits.
 

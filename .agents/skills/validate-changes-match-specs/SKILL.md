@@ -37,7 +37,7 @@ Common spec names include:
 - `SECURITY.md`
 - `security.md`
 
-Treat any markdown file bundled under a relevant `specs/<issue-number>/` directory as a valid spec candidate. Examples include focused specs such as `MIGRATION.md`, `ROLLBACK.md`, `PRIVACY.md`, `API.md`, or `TESTING.md`.
+Treat any markdown file bundled under a relevant `specs/<id>/` directory as a valid spec candidate. The id may be a ticket, issue, or feature name. Examples include focused specs such as `MIGRATION.md`, `ROLLBACK.md`, `PRIVACY.md`, `API.md`, or `TESTING.md`.
 
 If no specs were introduced or modified, look for existing specs referenced by the PR description, commit messages, branch name, changed files, or nearby `specs/` directories. If there is still no relevant spec, stop and report that there is no spec to validate against.
 

@@ -1,6 +1,6 @@
 ---
 name: write-product-spec
-description: Writes a PRODUCT.md only when a significant user-facing feature or durable public consumer contract has meaningful behavior decisions worth reviewing independently of implementation. Use when the user asks for a product spec, desired behavior doc, or PRD; first recommend a standalone TECH.md or no product spec for internal hardening, bug fixes, refactors, and other work that preserves existing product semantics.
+description: Writes a PRODUCT.md only when a significant user-facing feature or durable public or deliberately stable cross-team consumer contract has meaningful behavior decisions worth reviewing independently of implementation. Use when the user asks for a product spec, desired behavior doc, or PRD; first recommend a standalone TECH.md or no product spec for internal work whose relevant consumer semantics remain unchanged.
 ---
 
 # write-product-spec
@@ -15,9 +15,10 @@ The product spec should make meaningful product behavior decisions unambiguous e
 
 - For UI / UX features: the human using Warp.
 - For a public API, versioned protocol, or externally consumed library: the callers of that surface — other services, client code, plugins, or agents.
+- For a deliberately stable cross-team contract: the named teams or services whose compatibility expectations are intentionally defined and reviewed.
 - For a CLI tool or developer-facing surface: the developer invoking it.
 
-Internal code that calls a data model, module, or helper is not by itself a product audience. Internal contracts, lifecycle transitions, failure handling, and correctness matrices belong in `TECH.md` and tests unless they create a separately meaningful public contract.
+Internal code that calls a data model, module, or helper is not by itself a product audience. A cross-team contract qualifies only when its owners and consumers deliberately treat its semantics as stable and worth independent review. Other internal contracts, lifecycle transitions, failure handling, and correctness matrices belong in `TECH.md` and tests.
 
 A product spec does not imply that a tech spec is needed, and a tech spec does not imply that a product spec is needed. When both add independent value, implementation details, validation, and test planning live in the companion `TECH.md`, produced by the `write-tech-spec` skill.
 
@@ -25,15 +26,17 @@ A product spec does not imply that a tech spec is needed, and a tech spec does n
 
 Before writing, decide which artifact best fits the work:
 
-- **Create `PRODUCT.md`** when there are meaningful user-facing or public-contract choices that product, design, API consumers, or reviewers can evaluate independently of implementation.
-- **Use only `TECH.md` with a concise `Behavioral guarantees` section** when the work is technically complex or risky but preserves existing product semantics, such as internal hardening, a bug fix, a refactor, lifecycle recovery, concurrency correctness, or migration plumbing.
+- **Create `PRODUCT.md`** when there are meaningful user-facing, public-contract, or deliberately stable cross-team contract choices that product, design, consumers, or reviewers can evaluate independently of implementation.
+- **Use only `TECH.md` with concise `Technical safety and preservation guarantees`** when the work is technically complex or risky but preserves the relevant consumer semantics, such as internal hardening, a bug fix, a refactor, lifecycle recovery, concurrency correctness, or migration plumbing.
 - **Create no spec** when the work is small, clear, and better captured by the issue, code, and tests.
 - **Create both** only when product behavior and technical design each have independent ambiguity or review value.
+
+Before deciding not to create `PRODUCT.md`, state in one sentence whether user-visible, public, and deliberately stable cross-team consumer semantics — including failure and recovery behavior — change. If they change, explain briefly why the independent-value test still does not warrant a product spec; a narrow, obvious behavior change may still need no spec. Task labels such as "bug fix," "refactor," and "hardening" are not evidence that semantics remain unchanged.
 
 Ask:
 
 - Would `PRODUCT.md` still be useful if the implementation changed completely?
-- Does it contain decisions that a product/design stakeholder or public consumer should review?
+- Does it contain decisions that a product/design stakeholder, public consumer, or owner of a deliberately stable cross-team contract should review?
 - Will it be an independent source of truth, rather than a less precise duplicate of `TECH.md` and its test plan?
 
 If the answers are no, do not create `PRODUCT.md`. If the user explicitly requested one, explain why it may be redundant and recommend the better artifact before proceeding.
@@ -76,7 +79,7 @@ Optional sections — include only when they add signal beyond the core. Omit th
 - **Figma** — Include with a link when one exists, or an explicit `Figma: none provided` note when design matters but no mock exists. Omit entirely for non-visual features. See "Figma mocks" above.
 - **Open questions** — Prefer inline `**Open question:** …` next to the relevant behavior. Include a dedicated section only if there are multiple unresolved questions worth collecting.
 
-Do not include Validation, Success criteria, or Testing sections. Validation and test planning live in `TECH.md` when one exists. Write Behavior as testable guarantees that a tech spec can reference without duplicating them.
+Do not include Validation, Success criteria, or Testing sections. Validation and test planning live in `TECH.md` when one exists. For PRODUCT-only work, keep a lightweight validation map in the implementation plan or PR. Write Behavior as testable guarantees that verification can reference without duplicating them.
 
 ## The Behavior section
 
@@ -94,13 +97,13 @@ Describe the items below only when they are relevant to the product surface:
 - Keyboard, accessibility, and focus expectations where relevant.
 - Invariants that must hold at all times and behaviors that must not regress.
 
-Do not enumerate internal races, stale events, missing messages, concurrency cases, persistence details, or downstream test expectations unless they change the user-visible or public-consumer contract. Put those in `TECH.md` and tests. Length Behavior to match the amount of genuine product ambiguity, not the implementation's technical complexity.
+Do not enumerate internal races, stale events, missing messages, concurrency cases, persistence details, or downstream test expectations unless they change a consumer contract that belongs in `PRODUCT.md`. Put those in `TECH.md` and tests. Length Behavior to match the amount of genuine product ambiguity, not the implementation's technical complexity.
 
 ## Length heuristic
 
 Behavior should be as long as the product ambiguity requires. Do not inflate it to reflect technical complexity or to enumerate the validation matrix. The heuristic below applies to everything around Behavior (Summary, optional sections): keep that framing thin so the spec's total length reflects the product surface, not structural overhead.
 
-- Bug fix, hardening, or refactor that preserves existing product semantics: no product spec. Use concise behavioral guarantees in `TECH.md` if a technical design is warranted.
+- Bug fix, hardening, or refactor whose one-sentence preservation check confirms unchanged relevant consumer semantics: no product spec. Use concise technical safety and preservation guarantees in `TECH.md` if a technical design is warranted.
 - Trivial feature or narrow UI tweak: usually no spec.
 - Small product surface with few meaningful decisions or edge cases: framing plus Behavior typically ~30–60 lines total.
 - Medium product surface with multiple user-visible states or interactions: typically ~80–150 lines total.
@@ -119,9 +122,9 @@ If you find yourself writing the same idea in Summary, Problem, Goals, and Behav
 
 ## Keep the spec current
 
-Approved specs may ship in the same PR as the implementation. As implementation evolves, update `PRODUCT.md` in the same PR when user-facing behavior or UX details change. The checked-in spec should describe the feature that actually ships.
+Approved specs may ship in the same PR as the implementation. As implementation evolves, update `PRODUCT.md` in the same PR when user-facing behavior, UX details, public contracts, or deliberately stable cross-team contracts change. The checked-in spec should describe the feature that actually ships.
 
-If evolving design removes the distinct product semantics and `PRODUCT.md` becomes a duplicate of `TECH.md`, consolidate any remaining stable behavioral guarantees into `TECH.md` and remove the redundant product spec rather than maintaining both.
+If evolving design removes the distinct product semantics and `PRODUCT.md` becomes a duplicate of `TECH.md`, propose consolidating any remaining stable guarantees into `TECH.md`. Get explicit confirmation from the user or accountable spec owner before deleting or reclassifying an approved product spec. Surface material behavior changes for re-review; routine edits that keep the approved intent current do not require renewed approval.
 
 For large features, the implementer may optionally keep a `DECISIONS.md` file summarizing concrete decisions made during design and implementation. Offer it when it would help future agents; otherwise skip it.
 

@@ -25,10 +25,10 @@ Each skill lives in its own directory under `.agents/skills/`. The only required
 
 ### Spec workflow
 
-- `write-product-spec` — writes user-facing `PRODUCT.md` specs.
-- `write-tech-spec` — writes implementation-oriented `TECH.md` specs.
-- `spec-driven-implementation` — guides the full spec-first workflow for substantial features.
-- `implement-specs` — implements approved `PRODUCT.md` and `TECH.md` files while keeping specs and code aligned.
+- `write-product-spec` — writes `PRODUCT.md` only for independently valuable consumer-behavior decisions.
+- `write-tech-spec` — writes standalone or companion implementation-oriented `TECH.md` specs.
+- `spec-driven-implementation` — chooses pragmatically among no spec, `PRODUCT.md` only, `TECH.md` only, or both.
+- `implement-specs` — implements whichever approved specs exist while keeping specs and code aligned.
 
 ### Development workflow
 
