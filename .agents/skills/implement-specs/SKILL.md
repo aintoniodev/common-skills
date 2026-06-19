@@ -73,7 +73,7 @@ Map each important approved commitment to at least one concrete verification ste
 ## Best Practices
 
 - Keep specs and code synchronized throughout implementation.
-- Do not re-litigate, delete, or reclassify the approved artifact set during implementation; surface material conflicts for review.
+- Treat the approved artifact set as settled input during implementation and surface material conflicts for review.
 - Prefer updating the spec immediately when decisions change rather than batching spec cleanup until the end.
 - Use optional tracking documents only when they add real value for a complex feature.
 - Keep the same PR coherent: spec updates, code changes, tests, and optional tracking docs should all support the same change narrative.

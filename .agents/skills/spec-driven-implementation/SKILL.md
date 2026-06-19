@@ -73,7 +73,7 @@ Evaluate the size, ambiguity, and risk of the work. If specs will not meaningful
 
 Do not assume `PRODUCT.md` comes first or that both documents are required. Choose no spec, `PRODUCT.md` only, `TECH.md` only, or both using the independent-value and semantic-preservation tests above.
 
-Treat the approved artifact set as part of the reviewed plan. Revisit artifact selection only through this workflow; do not ask implementation to re-litigate it.
+Treat the approved artifact set as part of the reviewed plan. Route any later artifact-selection review back through this workflow while implementation consumes the settled artifact set.
 
 ### 3. Write and approve the selected specs
 
@@ -125,7 +125,7 @@ Update `TECH.md`, when it exists, when:
 
 The checked-in specs should describe the change that actually ships, not just the initial intent. Keep those spec updates in the same PR as the related code changes whenever practical.
 
-If a spec stops adding independent value as the design evolves, propose consolidating any durable guarantees into the remaining source of truth. Get explicit confirmation from the user or accountable spec owner before deleting or reclassifying an approved spec.
+If evolving design calls the approved artifact set into question, return to the artifact-selection step. Explain the proposed artifact set, show how every durable guarantee remains represented, and get explicit confirmation from the user or accountable spec owner before changing the approved artifact set.
 
 ### 6. Verify behavior against the spec
 

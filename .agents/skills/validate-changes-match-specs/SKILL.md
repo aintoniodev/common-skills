@@ -222,9 +222,8 @@ When the user chooses to update implementation, modify code, tests, docs, migrat
 - Prefer updating implementation when the spec describes required user behavior, security behavior, compatibility, migration, or validation guarantees that the code does not satisfy.
 - If a mismatch affects security or privacy, be explicit about the risk before asking for a resolution.
 - If two mismatch decisions conflict, stop and ask for clarification before editing.
-- Do not treat a commitment's placement in a particular spec file as a mismatch.
-- Do not relocate or reclassify approved content unless the user explicitly chooses that resolution.
-- When updating a spec, preserve its existing role and style unless the user asks for broader restructuring.
+- Evaluate commitments on their substance regardless of which approved spec contains them.
+- Apply each selected spec correction in place, preserving the spec's existing role and style and limiting the edit to the mismatch resolution explicitly selected by the user.
 
 ## Validation after changes
 

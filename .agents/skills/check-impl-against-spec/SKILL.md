@@ -46,5 +46,5 @@ Determine whether the implementation in the checked-out PR materially matches th
 
 - Do not require literal one-to-one implementation of the spec when the PR achieves the same outcome safely.
 - Do not speculate about spec details that are not actually present in `spec_context.md`.
-- Do not discount, relocate, or reclassify a commitment based on which source document contains it.
+- Evaluate each commitment on its substance regardless of which source document contains it.
 - Do not post to GitHub directly.

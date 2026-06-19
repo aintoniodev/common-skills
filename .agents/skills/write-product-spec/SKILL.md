@@ -30,7 +30,7 @@ If the artifact set has not been chosen, use `spec-driven-implementation` to dec
 - Does it contain decisions that a product/design stakeholder, public consumer, or owner of a deliberately stable cross-team contract should review?
 - Will it be an independent source of truth, rather than a less precise duplicate of `TECH.md` and its test plan?
 
-Use the answers to focus the requested document on its independently valuable consumer decisions. Do not use this skill to recommend replacing or removing a directly requested `PRODUCT.md`.
+Use the answers to focus the requested document on its independently valuable consumer decisions. Keep this skill focused on producing and right-sizing the requested `PRODUCT.md`; artifact selection belongs to `spec-driven-implementation`.
 
 Write specs to `specs/<id>/PRODUCT.md`, where `<id>` is one of:
 
@@ -115,7 +115,7 @@ If you find yourself writing the same idea in Summary, Problem, Goals, and Behav
 
 Approved specs may ship in the same PR as the implementation. As implementation evolves, update `PRODUCT.md` in the same PR when user-facing behavior, UX details, public contracts, or deliberately stable cross-team contracts change. The checked-in spec should describe the feature that actually ships.
 
-If evolving design changes the document's value, keep `PRODUCT.md` current for its approved behavior and surface any proposed artifact-set change through `spec-driven-implementation` rather than consolidating, removing, or reclassifying it here. Surface material behavior changes for re-review; routine edits that keep the approved intent current do not require renewed approval.
+If evolving design changes the document's value, keep `PRODUCT.md` current for its approved behavior and return to `spec-driven-implementation` to revisit artifact selection. Surface material behavior changes for re-review; routine edits that keep the approved intent current do not require renewed approval.
 
 For large features, the implementer may optionally keep a `DECISIONS.md` file summarizing concrete decisions made during design and implementation. Offer it when it would help future agents; otherwise skip it.
 

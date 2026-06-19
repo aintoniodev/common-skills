@@ -25,7 +25,7 @@ Ticket / issue references are optional. If the user has a Linear ticket or GitHu
 
 If the artifact set has not been chosen, use `spec-driven-implementation` to decide which specs add value. When the user directly asks for `TECH.md`, honor that choice. Right-size the requested document to the amount of technical ambiguity, risk, and implementation detail that reviewers need: a local change using established patterns can be brief, while cross-cutting work or meaningful tradeoffs warrant more detail.
 
-Use every approved companion spec as input. When no `PRODUCT.md` exists, include concise `Technical safety and preservation guarantees` that capture the intended outcome and safety boundary. Do not use this skill to create, replace, consolidate, remove, or reclassify companion specs.
+Use every approved companion spec as input. When no `PRODUCT.md` exists, include concise `Technical safety and preservation guarantees` that capture the intended outcome and safety boundary. Keep this skill focused on the requested `TECH.md`; `spec-driven-implementation` owns artifact selection.
 
 If the implementation is too uncertain to specify accurately, recommend an e2e prototype before finalizing `TECH.md` rather than skipping the requested document.
 
@@ -93,7 +93,7 @@ If Context and Proposed changes end up describing the same files and state from 
 
 Approved specs may ship in the same PR as the implementation. Update `TECH.md` in the same PR when module boundaries, implementation sequencing, risks, validation strategy, or rollout assumptions change. The checked-in spec should describe the implementation that actually ships.
 
-Surface material design or contract changes for re-review. Do not delete or reclassify an approved spec without explicit confirmation from the user or accountable spec owner; routine edits that keep the approved design current do not require renewed approval.
+Surface material design or contract changes for re-review. Treat the approved artifact set as settled while using this skill and return to `spec-driven-implementation` to revisit it; routine edits that keep the approved design current do not require renewed approval.
 
 For large features, the implementer may optionally keep a `DECISIONS.md` file summarizing concrete decisions. Offer it when it would help future agents; otherwise skip it.
 
