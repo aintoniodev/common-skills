@@ -1,17 +1,17 @@
 ---
 name: spec-driven-implementation
-description: Drive a spec-first workflow for substantial features by writing PRODUCT.md before implementation, writing TECH.md when warranted, and keeping both specs updated as implementation evolves. Use when starting a significant feature, planning agent-driven implementation, or when the user wants product and tech specs checked into source control.
+description: Drives a pragmatic spec-first workflow by choosing among no spec, PRODUCT.md only, standalone TECH.md with behavioral guarantees, or both. Use when starting significant feature or hardening work, planning agent-driven implementation, or deciding which specs should be checked into source control.
 ---
 
 # spec-driven-implementation
 
-Drive a spec-first workflow for substantial features in Warp.
+Drive a spec-first workflow for substantial work in Warp.
 
 ## Overview
 
-Use this skill for significant features where a written spec will improve implementation quality, reduce ambiguity, or make review easier. Be pragmatic: not every change needs specs.
+Use this skill for significant work where a written spec will improve implementation quality, reduce ambiguity, or make review easier. Be pragmatic: not every change needs specs, and not every technically complex change needs a product spec.
 
-Specs should usually live in:
+Specs may live in:
 
 - `specs/<linear-ticket-number>/PRODUCT.md`
 - `specs/<linear-ticket-number>/TECH.md`
@@ -23,7 +23,7 @@ For example:
 
 `specs/` should contain only ticket-named directories as direct children. Do not create engineer-named subdirectories or feature-slug directories there.
 
-If a relevant Linear issue does not already exist, create one before writing specs. Use the Linear MCP tools directly:
+Use a relevant Linear issue when one already exists. Only create one when the user explicitly asks; in that case use the Linear MCP tools directly:
 
 - `list_teams` to find the appropriate team
 - `list_issue_labels` to inspect the expected labels/tags
@@ -31,7 +31,7 @@ If a relevant Linear issue does not already exist, create one before writing spe
 
 If the correct team or labels are not obvious from the request and surrounding context, use `ask_user_question` to clarify rather than guessing.
 
-These specs should largely be written by agents, not by hand, and should be checked into source control so they can be reviewed and kept current with the code.
+Specs should largely be written by agents, not by hand, and should be checked into source control when their ongoing review value exceeds the cost of keeping them current with the code.
 
 ## When specs are required
 
@@ -51,27 +51,36 @@ Specs are often unnecessary for:
 
 For pure UI changes, the product spec is often useful while the tech spec may be unnecessary.
 
+Choose the smallest document set that adds independent value:
+
+- **No spec** — Small, clear work that is better captured by the issue, code, and tests.
+- **`PRODUCT.md` only** — Meaningful user-facing or public-contract behavior is ambiguous, but implementation is straightforward.
+- **`TECH.md` only** — Internal hardening, a bug fix, refactor, migration, lifecycle/concurrency work, or other technically complex change that preserves existing product semantics. Include a concise `Behavioral guarantees` section.
+- **Both** — Product behavior and technical design each contain meaningful, independently reviewable decisions.
+
+Technical size or cross-cutting scope alone is not a reason to create `PRODUCT.md`.
+
 ## Workflow
 
-### 1. Decide whether the feature needs specs
+### 1. Decide whether the work needs specs
 
-Evaluate the size, ambiguity, and risk of the feature. If specs will not meaningfully improve execution or review, skip them and focus on verification instead.
+Evaluate the size, ambiguity, and risk of the work. If specs will not meaningfully improve execution or review, skip them and focus on verification instead.
 
-### 2. Write the product spec first
+### 2. Choose and write only the warranted specs
 
-Before implementation, create `PRODUCT.md` describing the desired user-facing behavior.
+Do not assume `PRODUCT.md` comes first or that both documents are required.
 
-Use the `write-product-spec` skill to produce it. The product spec should define:
+Use the `write-product-spec` skill only when the product behavior has independent review value. The product spec should define:
 
 - what problem is being solved
 - the desired user experience
-- invariants and edge cases
-- success criteria
-- how the behavior will be validated
+- meaningful product invariants and user-visible edge cases
 
-If the feature has UI or interaction design, ask for a Figma mock if one exists. If there is no mock, continue but call that out explicitly in the product spec.
+If the work has UI or interaction design, ask for a Figma mock if one exists. If there is no mock, continue but call that out explicitly in the product spec.
 
 Reference the Linear issue in the spec when one exists. Because specs live under `specs/<linear-ticket-number>/...`, this should usually be straightforward.
+
+For technically complex work that preserves existing product semantics, skip `PRODUCT.md` and use a standalone `TECH.md` with concise behavioral guarantees.
 
 ### 3. Write the tech spec when warranted
 
@@ -88,9 +97,9 @@ It is acceptable to write the tech spec after an e2e prototype if that leads to 
 
 ### 4. Implement approved specs
 
-After the specs are approved, use the `implement-specs` skill to build from the approved `PRODUCT.md` and `TECH.md`.
+After the warranted specs are approved, use the `implement-specs` skill to build from whichever approved documents exist.
 
-The implementation can often be pushed in the same PR as the product and tech specs. As the engineer iterates, keep `PRODUCT.md`, `TECH.md`, code changes, and tests in that same PR so the review reflects the feature that will actually ship.
+The implementation can often be pushed in the same PR as the specs. As the engineer iterates, keep the applicable specs, code changes, and tests in that same PR so the review reflects the change that will actually ship.
 
 For large features, the implementer may optionally offer:
 
@@ -103,24 +112,26 @@ These are optional aids, not required outputs.
 
 If implementation changes from the spec, update the spec rather than leaving it stale.
 
-Update `PRODUCT.md` when:
+Update `PRODUCT.md`, when it exists, when:
 
 - user-facing behavior changes
-- success criteria change
+- meaningful product guarantees change
 - UX details or edge cases change
 
-Update `TECH.md` when:
+Update `TECH.md`, when it exists, when:
 
 - the implementation approach changes
 - architectural boundaries move
 - risks, dependencies, or rollout details change
 - the testing or validation plan changes
 
-The checked-in specs should describe the feature that actually ships, not just the initial intent. Keep those spec updates in the same PR as the related code changes whenever practical.
+The checked-in specs should describe the change that actually ships, not just the initial intent. Keep those spec updates in the same PR as the related code changes whenever practical.
+
+If a spec stops adding independent value as the design evolves, consolidate any durable guarantees into the remaining source of truth and remove the redundant document rather than maintaining two synchronized copies.
 
 ### 6. Verify behavior against the spec
 
-Before considering the work complete, make sure verification maps back to the specs. Prefer tests and artifacts that validate the product behavior directly:
+Before considering the work complete, make sure verification maps back to the applicable specs. Prefer tests and artifacts that validate the product behavior or standalone behavioral guarantees directly:
 
 - unit tests and regression coverage that follow the repository's local testing conventions
 - integration tests for critical user flows
@@ -131,8 +142,9 @@ Before considering the work complete, make sure verification maps back to the sp
 
 - Be pragmatic above all else.
 - Write specs to improve input quality for agents, not as ceremony.
+- Choose document types based on independent review value, not implementation size alone.
 - Keep product specs behavior-oriented and implementation-light.
-- Keep tech specs implementation-oriented and grounded in current codebase patterns.
+- Keep tech specs implementation-oriented and grounded in current codebase patterns; use concise behavioral guarantees when no product spec is warranted.
 - When a spec references relevant code chunks, include the inspected commit SHA in the file reference when possible and link the reference to the exact GitHub `blob/<sha>/...#Lx-Ly` lines.
 - Use review time to validate specs and behavior, not to over-index on code style nits.
 

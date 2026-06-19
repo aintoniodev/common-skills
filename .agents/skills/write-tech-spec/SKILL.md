@@ -1,15 +1,15 @@
 ---
 name: write-tech-spec
-description: Write a TECH.md spec for a significant Warp feature after researching the current codebase and implementation constraints. Use when the user asks for a technical spec, implementation plan, or architecture doc tied to a product spec.
+description: Writes a TECH.md spec for significant features, hardening, bug fixes, or refactors after researching the current codebase and implementation constraints. Use when the user asks for a technical spec, implementation plan, or architecture doc; supports either a companion PRODUCT.md or a standalone TECH.md with concise behavioral guarantees.
 ---
 
 # write-tech-spec
 
-Write a `TECH.md` spec for a significant feature in Warp.
+Write a `TECH.md` spec for significant technical work in Warp.
 
 ## Overview
 
-The tech spec should translate product intent into an implementation plan that fits the existing codebase, documents architectural choices, and makes the work easier for agents to execute and reviewers to evaluate.
+The tech spec should translate the desired outcome into an implementation plan that fits the existing codebase, documents architectural choices, and makes the work easier for agents to execute and reviewers to evaluate. It may stand alone or accompany `PRODUCT.md`; do not create a product spec merely to anchor a technical design.
 
 Write specs to `specs/<id>/TECH.md`, where `<id>` is one of:
 
@@ -25,7 +25,7 @@ Ticket / issue references are optional. If the user has a Linear ticket or GitHu
 
 Use this skill when the implementation spans multiple modules, has meaningful architectural tradeoffs, or when reviewers will benefit from seeing the plan before or alongside the code. For pure UI changes or straightforward fixes, a tech spec is often unnecessary.
 
-Prefer to have a `PRODUCT.md` first so the technical plan is anchored to agreed behavior. If the implementation is still too uncertain, build an e2e prototype first and then write the tech spec from what was learned.
+Use an existing `PRODUCT.md` when it captures meaningful product behavior decisions. For internal hardening, bug fixes, refactors, migrations, or other work that preserves existing product semantics, prefer a standalone `TECH.md` with a short `Behavioral guarantees` section. If the implementation is still too uncertain, build an e2e prototype first and then write the tech spec from what was learned.
 
 ## Research before writing
 
@@ -36,13 +36,14 @@ When referencing relevant code chunks in the spec, prefer commit-pinned referenc
 
 Required sections:
 
-1. **Context** — What's being built, how the current system works in the area being changed, and the most relevant files with line references. Combine the "problem," "current state," and "relevant code" into one grounded section. Example references:
+1. **Behavioral guarantees** — Required only when there is no companion `PRODUCT.md`. Capture roughly 3–8 stable, reviewable guarantees that define the intended outcome and safety boundary without duplicating the technical transition matrix or test plan. For hardening and bug fixes, these often state that normal behavior remains unchanged, important state/data is preserved, recovery is conservative, and malformed or unsupported inputs cannot corrupt trustworthy state.
+2. **Context** — What's being built, how the current system works in the area being changed, and the most relevant files with line references. Combine the "problem," "current state," and "relevant code" into one grounded section. Example references:
    - [`app/src/workspace/mod.rs:42 @ <commit-sha>`](https://github.com/warpdotdev/warp/blob/<commit-sha>/app/src/workspace/mod.rs#L42) — entry point for the user flow
    - [`app/src/workspace/workspace.rs (120-220) @ <commit-sha>`](https://github.com/warpdotdev/warp/blob/<commit-sha>/app/src/workspace/workspace.rs#L120-L220) — state and event handling that will likely change
-   Reference `PRODUCT.md` for user-visible behavior rather than restating it.
-2. **Proposed changes** — The implementation plan: which modules change, new types/APIs/state being introduced, data flow, ownership boundaries, and how the design follows existing patterns. Call out tradeoffs when there is more than one reasonable path.
-3. **Testing and validation** — How the implementation will be verified against the product behavior. Owns everything about proving the feature works: unit tests, integration tests, manual steps, screenshots, videos, and any other verification. Reference the numbered Behavior invariants from `PRODUCT.md` directly rather than restating them; each important invariant should map to a concrete test or verification step. This section is where validation lives — `PRODUCT.md` intentionally does not have a Validation section.
-4. **Parallelization** — Actively evaluate whether parallel sub-agents (launched via `run_agents`) would meaningfully reduce wall-clock time or isolate work. Skip this section if `run_agents` is not available. When the spec proposes using sub-agents, include for each proposed agent:
+   Reference `PRODUCT.md` for user-visible behavior when it exists; otherwise use the standalone Behavioral guarantees above.
+3. **Proposed changes** — The implementation plan: which modules change, new types/APIs/state being introduced, data flow, ownership boundaries, and how the design follows existing patterns. Call out tradeoffs when there is more than one reasonable path.
+4. **Testing and validation** — How the implementation will be verified against the intended behavior and technical risks. Owns everything about proving the change works: unit tests, integration tests, manual steps, screenshots, videos, and any other verification. Map important validation to the companion product behavior or standalone behavioral guarantees without restating either as a second exhaustive matrix.
+5. **Parallelization** — Actively evaluate whether parallel sub-agents (launched via `run_agents`) would meaningfully reduce wall-clock time or isolate work. Skip this section if `run_agents` is not available. When the spec proposes using sub-agents, include for each proposed agent:
    - A short name/role and the subtask it owns.
    - Execution mode (`local` or `remote`) with a one-line rationale.
    - For local agents: the working directory or git worktree it should use, so parallel agents do not collide on the same checkout or files.
@@ -79,7 +80,8 @@ If Context and Proposed changes end up describing the same files and state from 
 - Pin important code references to a commit SHA and link them to the corresponding GitHub lines when the repository has an accessible remote.
 - Prefer concrete implementation guidance over generic architecture language.
 - Explain why the proposed design fits this repo.
-- Reference `PRODUCT.md` for behavior instead of restating it.
+- Reference `PRODUCT.md` for behavior when it exists. Otherwise keep Behavioral guarantees concise and stable rather than translating every technical state or test case into product language.
+- Do not create or preserve a redundant `PRODUCT.md` solely because the technical work is large or cross-cutting.
 - Each section should earn its place — if a section would repeat another or contain only boilerplate, omit it.
 
 ## Keep the spec current
