@@ -1,6 +1,6 @@
 ---
 name: write-product-spec
-description: Writes a consumer-behavior-focused PRODUCT.md for significant user-facing features and durable public or deliberately stable cross-team consumer contracts. Use when the user asks for a product spec, desired behavior doc, or PRD; right-sizes the document to genuine product ambiguity and avoids duplicating technical design.
+description: Writes a consumer-behavior-focused PRODUCT.md spec. Use when the user asks for a product spec, desired behavior document, or PRD.
 ---
 
 # write-product-spec
@@ -24,13 +24,13 @@ A product spec does not imply that a tech spec is needed, and a tech spec does n
 
 ## Right-size `PRODUCT.md` around its independent value
 
-If the artifact set has not been chosen, use `spec-driven-implementation` to decide which specs add value. When the user directly asks for `PRODUCT.md`, honor that choice. Use the questions below to right-size the document, flag likely redundancy, and avoid treating technical complexity as product ambiguity:
+If the artifact set has not been chosen, use `spec-driven-implementation` to decide which specs add value. When the user directly asks for `PRODUCT.md`, honor that choice. Use the questions below to right-size the document and avoid treating technical complexity as product ambiguity:
 
 - Would `PRODUCT.md` still be useful if the implementation changed completely?
 - Does it contain decisions that a product/design stakeholder, public consumer, or owner of a deliberately stable cross-team contract should review?
 - Will it be an independent source of truth, rather than a less precise duplicate of `TECH.md` and its test plan?
 
-If the answers are no, explain why `PRODUCT.md` may be redundant and recommend the better artifact, but continue if the user still wants the document.
+Use the answers to focus the requested document on its independently valuable consumer decisions. Do not use this skill to recommend replacing or removing a directly requested `PRODUCT.md`.
 
 Write specs to `specs/<id>/PRODUCT.md`, where `<id>` is one of:
 
@@ -94,8 +94,8 @@ Do not enumerate internal races, stale events, missing messages, concurrency cas
 
 Behavior should be as long as the product ambiguity requires. Do not inflate it to reflect technical complexity or to enumerate the validation matrix. The heuristic below applies to everything around Behavior (Summary, optional sections): keep that framing thin so the spec's total length reflects the product surface, not structural overhead.
 
-- Bug fix, hardening, or refactor that preserves relevant consumer semantics: `PRODUCT.md` is usually unnecessary. If requested, keep it focused on any genuine consumer decisions and put technical safety and preservation guarantees in `TECH.md` when a technical design is warranted.
-- Trivial feature or narrow UI tweak: usually no spec.
+- Bug fix, hardening, or refactor that preserves relevant consumer semantics: keep the requested product spec focused on any genuine consumer decisions and leave technical safety and preservation guarantees to `TECH.md` when one exists.
+- Trivial feature or narrow UI tweak: keep the requested product spec brief and focused on the few meaningful decisions.
 - Small product surface with few meaningful decisions or edge cases: framing plus Behavior typically ~30–60 lines total.
 - Medium product surface with multiple user-visible states or interactions: typically ~80–150 lines total.
 - Large or behaviorally rich feature: longer is fine, and most of the length should live in Behavior.
@@ -115,7 +115,7 @@ If you find yourself writing the same idea in Summary, Problem, Goals, and Behav
 
 Approved specs may ship in the same PR as the implementation. As implementation evolves, update `PRODUCT.md` in the same PR when user-facing behavior, UX details, public contracts, or deliberately stable cross-team contracts change. The checked-in spec should describe the feature that actually ships.
 
-If evolving design removes the distinct product semantics and `PRODUCT.md` becomes a duplicate of `TECH.md`, propose consolidating any remaining stable guarantees into `TECH.md`. Get explicit confirmation from the user or accountable spec owner before deleting or reclassifying an approved product spec. Surface material behavior changes for re-review; routine edits that keep the approved intent current do not require renewed approval.
+If evolving design changes the document's value, keep `PRODUCT.md` current for its approved behavior and surface any proposed artifact-set change through `spec-driven-implementation` rather than consolidating, removing, or reclassifying it here. Surface material behavior changes for re-review; routine edits that keep the approved intent current do not require renewed approval.
 
 For large features, the implementer may optionally keep a `DECISIONS.md` file summarizing concrete decisions made during design and implementation. Offer it when it would help future agents; otherwise skip it.
 
@@ -129,7 +129,7 @@ For large features, the implementer may optionally keep a `DECISIONS.md` file su
 
 A sample Behavior section for a hypothetical feature: rendering GitHub-flavored Markdown tables in the Warp block list. It demonstrates the expected shape — numbered, testable, user-perspective invariants that enumerate defaults, edge cases, malformed input, streaming, selection/copy, search, sharing, theming, and cross-surface consistency, with one inline open question.
 
-This is intentionally a behaviorally rich, user-facing example. Do not use its length or exhaustiveness as the default for bug fixes, hardening, refactors, or internal technical work; those should usually have no `PRODUCT.md`.
+This is intentionally a behaviorally rich, user-facing example. Do not use its length or exhaustiveness as the default for bug fixes, hardening, refactors, or internal technical work; keep any requested product spec for those changes short and focused on genuine consumer decisions.
 
 ````markdown
 ## Behavior

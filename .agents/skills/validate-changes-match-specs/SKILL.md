@@ -87,7 +87,7 @@ If the user chooses to append a follow-up comment, draft the comment for approva
 
 ## Security spec validation
 
-When a security, privacy, compliance, permissions, auth, data-handling, or logging spec is present, validate it especially thoroughly. Treat the security spec as a set of explicit guarantees and threat mitigations, not as high-level guidance.
+When any relevant spec contains security, privacy, compliance, permissions, auth, data-handling, or logging commitments, validate them especially thoroughly. Treat those commitments as explicit guarantees and threat mitigations, not as high-level guidance.
 
 For each security commitment, verify both:
 
@@ -107,7 +107,7 @@ Check implementation details such as:
 - rate limits, abuse cases, replay behavior, and confused-deputy risks
 - test coverage for both allowed and denied cases
 
-If you discover a plausible security gap that is not covered by the security spec, include it as a proposed spec amendment rather than ignoring it because it is missing from the spec. Mark it as `security amendment` in the mismatch report, explain the risk, cite the code or behavior that exposed it, and ask the user whether to update the spec, update the implementation, both, or acknowledge without changes.
+If you discover a plausible security gap that is not covered by the approved specs, include it as a proposed spec amendment rather than ignoring it because it is missing from the specs. Mark it as `security amendment` in the mismatch report, explain the risk, cite the code or behavior that exposed it, and ask the user whether to update the spec, update the implementation, both, or acknowledge without changes.
 
 Do not make speculative security claims. If evidence is incomplete, label the item as a validation gap and describe exactly what would need to be checked.
 
@@ -141,16 +141,16 @@ If the user skips cloud validation, continue with local/static validation and me
 
 Treat a mismatch as material when any of these are true:
 
-- The implementation omits behavior required by the product spec.
-- The implementation behaves differently from the product spec in a user-visible way.
-- The implementation uses a technical approach that contradicts the tech spec in a way that matters for correctness, maintainability, rollout, or review.
-- The implementation adds meaningful behavior or scope not described by the specs.
-- Security, privacy, permission, or logging behavior differs from the security or product spec.
-- A discovered security gap is not covered by an existing security spec and should be considered as a spec amendment.
+- The implementation omits an approved behavior, design, security, migration, rollout, or validation commitment.
+- The implementation produces user-visible behavior that differs materially from an approved commitment.
+- The implementation contradicts an approved technical or design decision in a way that matters for correctness, maintainability, rollout, or review.
+- The implementation adds meaningful behavior or scope not described by the approved specs.
+- Security, privacy, permission, or logging behavior differs from approved commitments.
+- A discovered security gap is not covered by the approved specs and should be considered as a spec amendment.
 - The implementation does not match the last acknowledged resolution on a PR review comment.
 - Required migrations, rollout steps, feature flags, telemetry, validation, or cleanup are missing.
-- Tests or validation promised by the spec are absent or materially weaker than described.
-- The spec still describes behavior that was deliberately changed during implementation.
+- Tests or validation promised by an approved spec are absent or materially weaker than described.
+- An approved spec still describes behavior that was deliberately changed during implementation.
 
 Do not flag harmless implementation details, naming differences, or local refactors when the implementation preserves the spec's intent.
 
@@ -222,9 +222,9 @@ When the user chooses to update implementation, modify code, tests, docs, migrat
 - Prefer updating implementation when the spec describes required user behavior, security behavior, compatibility, migration, or validation guarantees that the code does not satisfy.
 - If a mismatch affects security or privacy, be explicit about the risk before asking for a resolution.
 - If two mismatch decisions conflict, stop and ask for clarification before editing.
-- Keep product specs user-focused and implementation-light.
-- Keep tech specs grounded in actual architecture and code paths.
-- Keep security specs explicit about threats, boundaries, and mitigations.
+- Do not treat a commitment's placement in a particular spec file as a mismatch.
+- Do not relocate or reclassify approved content unless the user explicitly chooses that resolution.
+- When updating a spec, preserve its existing role and style unless the user asks for broader restructuring.
 
 ## Validation after changes
 

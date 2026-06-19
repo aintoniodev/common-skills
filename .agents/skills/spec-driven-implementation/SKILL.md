@@ -73,7 +73,7 @@ Evaluate the size, ambiguity, and risk of the work. If specs will not meaningful
 
 Do not assume `PRODUCT.md` comes first or that both documents are required. Choose no spec, `PRODUCT.md` only, `TECH.md` only, or both using the independent-value and semantic-preservation tests above.
 
-Treat the approved artifact set as part of the reviewed plan. Implementation may flag that an approved document has become redundant, but must not delete or reclassify it without explicit confirmation from the user or accountable spec owner.
+Treat the approved artifact set as part of the reviewed plan. Revisit artifact selection only through this workflow; do not ask implementation to re-litigate it.
 
 ### 3. Write and approve the selected specs
 

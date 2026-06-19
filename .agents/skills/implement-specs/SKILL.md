@@ -9,7 +9,7 @@ Implement approved work from `PRODUCT.md`, `TECH.md`, or both.
 
 ## Overview
 
-Use this skill after the warranted specs are approved. The goal is to build the change described by the available specs while keeping those checked-in specs and the implementation aligned as the work evolves.
+Use this skill after the applicable specs are approved. The goal is to build the change described by the available specs while keeping those checked-in specs and the implementation aligned as the work evolves.
 
 Approved specs should live directly under `specs/<id>/`, for example `specs/APP-1234/PRODUCT.md`, `specs/gh-4567/TECH.md`, or both.
 
@@ -19,10 +19,8 @@ In many cases, the implementation should be pushed in the same PR as the applica
 
 Before using this skill:
 
-- confirm which of `PRODUCT.md` and `TECH.md` make up the approved artifact set
-- confirm that at least one approved spec exists
-- confirm that the relevant specs have been reviewed and approved enough to start implementation
-- treat the approved artifact set as the starting contract; flag concerns about its continued value without deleting or reclassifying documents unilaterally
+- identify and read every approved spec relevant to the change
+- confirm that at least one approved spec exists and has been reviewed and approved enough to start implementation
 
 ## Workflow
 
@@ -47,7 +45,6 @@ During implementation:
 
 - keep behavior, design, and implementation aligned with all approved specs
 - add or update tests and verification artifacts as the work lands
-- for PRODUCT-only work, keep a lightweight validation map from important behavior to concrete verification in the implementation plan or PR
 
 Use the same PR for the specs and implementation when practical so the full evolution of the change is reviewable in one place.
 
@@ -60,8 +57,6 @@ In particular:
 - update whichever approved specs describe the changed behavior, design, constraints, risks, or validation
 - keep those updates in the same PR as the corresponding code changes
 
-If a spec stops adding independent value as the design evolves, propose consolidating any durable guarantees into the remaining source of truth. Get explicit confirmation from the user or accountable spec owner before deleting or reclassifying an approved document.
-
 The PR should describe the change that actually ships, not just the initial draft of the specs.
 
 ### 5. Verify against the specs
@@ -73,12 +68,12 @@ Prefer:
 - unit tests and regression coverage that follow the repository's local testing conventions
 - integration or end-to-end tests for important user flows
 
-Map each important technical guarantee and relevant product behavior to at least one concrete verification step without creating an exhaustive duplicate matrix.
+Map each important approved commitment to at least one concrete verification step without creating an exhaustive duplicate matrix.
 
 ## Best Practices
 
 - Keep specs and code synchronized throughout implementation.
-- Do not silently re-litigate, delete, or reclassify the approved artifact set.
+- Do not re-litigate, delete, or reclassify the approved artifact set during implementation; surface material conflicts for review.
 - Prefer updating the spec immediately when decisions change rather than batching spec cleanup until the end.
 - Use optional tracking documents only when they add real value for a complex feature.
 - Keep the same PR coherent: spec updates, code changes, tests, and optional tracking docs should all support the same change narrative.

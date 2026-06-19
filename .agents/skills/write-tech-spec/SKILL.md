@@ -1,6 +1,6 @@
 ---
 name: write-tech-spec
-description: Writes an implementation-oriented TECH.md for significant features, hardening, bug fixes, or refactors after researching the current codebase and implementation constraints. Use when the user asks for a technical spec, implementation plan, or architecture doc.
+description: Writes an implementation-oriented TECH.md spec. Use when the user asks for a technical spec, implementation plan, architecture document, or technical design.
 ---
 
 # write-tech-spec
@@ -21,11 +21,13 @@ Match the id used by the sibling `PRODUCT.md` when one exists. `specs/` should c
 
 Ticket / issue references are optional. If the user has a Linear ticket or GitHub issue, use its id. If they don't, ask them for a feature name to use as the directory. Only create a new Linear ticket or GitHub issue when the user explicitly asks for one; in that case use the Linear MCP tools or `gh` CLI respectively (and `ask_user_question` if team, labels, or repo are unclear).
 
-## When to use
+## Right-size `TECH.md` around its independent value
 
-Use this skill when the implementation spans multiple modules, has meaningful architectural tradeoffs, or when reviewers will benefit from seeing the plan before or alongside the code. For pure UI changes or straightforward fixes, a tech spec is often unnecessary.
+If the artifact set has not been chosen, use `spec-driven-implementation` to decide which specs add value. When the user directly asks for `TECH.md`, honor that choice. Right-size the requested document to the amount of technical ambiguity, risk, and implementation detail that reviewers need: a local change using established patterns can be brief, while cross-cutting work or meaningful tradeoffs warrant more detail.
 
-Use an existing `PRODUCT.md` when it captures meaningful consumer-behavior decisions. For internal hardening, bug fixes, refactors, migrations, or other work that preserves relevant consumer semantics, prefer a standalone `TECH.md` with short `Technical safety and preservation guarantees`. Do not infer preservation from the task label: state in one sentence whether user-visible, public, and deliberately stable cross-team consumer semantics — including failure and recovery behavior — remain unchanged. If the implementation is still too uncertain, build an e2e prototype first and then write the tech spec from what was learned.
+Use every approved companion spec as input. When no `PRODUCT.md` exists, include concise `Technical safety and preservation guarantees` that capture the intended outcome and safety boundary. Do not use this skill to create, replace, consolidate, remove, or reclassify companion specs.
+
+If the implementation is too uncertain to specify accurately, recommend an e2e prototype before finalizing `TECH.md` rather than skipping the requested document.
 
 ## Research before writing
 
@@ -71,7 +73,7 @@ Optional sections — include only when they add signal. Omit the heading entire
 
 Right-size the spec to the feature:
 
-- Single-file change with clear approach: skip the tech spec or keep it under ~40 lines.
+- Single-file change with clear approach: keep the requested tech spec under ~40 lines.
 - Multi-module change with some ambiguity: target ~80–150 lines.
 - Large cross-cutting or architecturally novel change: longer is fine when every section earns its place.
 
@@ -84,7 +86,7 @@ If Context and Proposed changes end up describing the same files and state from 
 - Prefer concrete implementation guidance over generic architecture language.
 - Explain why the proposed design fits this repo.
 - Reference `PRODUCT.md` for meaningful consumer-behavior decisions when it exists. Keep Technical safety and preservation guarantees concise and stable, and do not translate every technical state or test case into guarantee language.
-- Do not create a redundant `PRODUCT.md` solely because the technical work is large or cross-cutting. If an approved product spec later becomes redundant, follow the governance below.
+- Treat every approved companion spec as input; artifact-set changes belong in `spec-driven-implementation`.
 - Each section should earn its place — if a section would repeat another or contain only boilerplate, omit it.
 
 ## Keep the spec current
