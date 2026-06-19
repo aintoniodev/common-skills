@@ -1,6 +1,6 @@
 ---
 name: implement-specs
-description: Implements approved work from whichever specs exist, including PRODUCT.md, TECH.md, or both. Keeps applicable specs and code aligned as implementation evolves without silently creating, deleting, or reclassifying approved documents.
+description: Implements approved PRODUCT.md and/or TECH.md specs, keeping applicable specs and code aligned as implementation evolves. Use after the specs are approved and the next step is implementation.
 ---
 
 # implement-specs
@@ -28,12 +28,7 @@ Before using this skill:
 
 ### 1. Read the approved specs first
 
-Treat whichever sources exist as authoritative for their scope:
-
-- `PRODUCT.md` as the source of truth for meaningful user-facing, public-contract, or deliberately stable cross-team consumer behavior
-- `TECH.md` as the source of truth for architecture, sequencing, implementation shape, validation, and the `Technical safety and preservation guarantees` section, whether or not a product spec exists
-
-Make sure you understand the expected behavior, constraints, risks, and validation plan before writing code.
+Treat every approved spec as authoritative input to the intended change. Read all available specs before writing code and make sure you understand the expected behavior, design, constraints, risks, and validation plan.
 
 ### 2. Offer optional implementation aids for large features
 
@@ -50,8 +45,7 @@ Break the work into concrete implementation steps, then implement the change aga
 
 During implementation:
 
-- keep meaningful consumer behavior aligned with `PRODUCT.md` when it exists, otherwise with the outcome-preservation boundary in `TECH.md`
-- keep architecture and sequencing aligned with `TECH.md` when it exists
+- keep behavior, design, and implementation aligned with all approved specs
 - add or update tests and verification artifacts as the work lands
 - for PRODUCT-only work, keep a lightweight validation map from important behavior to concrete verification in the implementation plan or PR
 
@@ -63,8 +57,7 @@ If implementation reveals that approved behavior or design should materially cha
 
 In particular:
 
-- update `PRODUCT.md`, when it exists, when meaningful user-facing behavior, UX, public-contract, or deliberately stable cross-team contract decisions change
-- update `TECH.md`, when it exists, when architecture, sequencing, module boundaries, the `Technical safety and preservation guarantees` section, or validation strategy changes
+- update whichever approved specs describe the changed behavior, design, constraints, risks, or validation
 - keep those updates in the same PR as the corresponding code changes
 
 If a spec stops adding independent value as the design evolves, propose consolidating any durable guarantees into the remaining source of truth. Get explicit confirmation from the user or accountable spec owner before deleting or reclassifying an approved document.

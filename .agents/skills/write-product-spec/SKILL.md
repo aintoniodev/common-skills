@@ -1,11 +1,11 @@
 ---
 name: write-product-spec
-description: Writes a PRODUCT.md only when a significant user-facing feature or durable public or deliberately stable cross-team consumer contract has meaningful behavior decisions worth reviewing independently of implementation. Use when the user asks for a product spec, desired behavior doc, or PRD; first recommend a standalone TECH.md or no product spec for internal work whose relevant consumer semantics remain unchanged.
+description: Writes a consumer-behavior-focused PRODUCT.md for significant user-facing features and durable public or deliberately stable cross-team consumer contracts. Use when the user asks for a product spec, desired behavior doc, or PRD; right-sizes the document to genuine product ambiguity and avoids duplicating technical design.
 ---
 
 # write-product-spec
 
-Write a `PRODUCT.md` spec only when it adds durable product-level value.
+Write a consumer-behavior-focused `PRODUCT.md` spec that adds durable product-level value.
 
 ## Overview
 
@@ -22,24 +22,15 @@ Internal code that calls a data model, module, or helper is not by itself a prod
 
 A product spec does not imply that a tech spec is needed, and a tech spec does not imply that a product spec is needed. When both add independent value, implementation details, validation, and test planning live in the companion `TECH.md`, produced by the `write-tech-spec` skill.
 
-## First decide whether `PRODUCT.md` adds value
+## Right-size `PRODUCT.md` around its independent value
 
-Before writing, decide which artifact best fits the work:
-
-- **Create `PRODUCT.md`** when there are meaningful user-facing, public-contract, or deliberately stable cross-team contract choices that product, design, consumers, or reviewers can evaluate independently of implementation.
-- **Use only `TECH.md` with concise `Technical safety and preservation guarantees`** when the work is technically complex or risky but preserves the relevant consumer semantics, such as internal hardening, a bug fix, a refactor, lifecycle recovery, concurrency correctness, or migration plumbing.
-- **Create no spec** when the work is small, clear, and better captured by the issue, code, and tests.
-- **Create both** only when product behavior and technical design each have independent ambiguity or review value.
-
-Before deciding not to create `PRODUCT.md`, state in one sentence whether user-visible, public, and deliberately stable cross-team consumer semantics — including failure and recovery behavior — change. If they change, explain briefly why the independent-value test still does not warrant a product spec; a narrow, obvious behavior change may still need no spec. Task labels such as "bug fix," "refactor," and "hardening" are not evidence that semantics remain unchanged.
-
-Ask:
+If the artifact set has not been chosen, use `spec-driven-implementation` to decide which specs add value. When the user directly asks for `PRODUCT.md`, honor that choice. Use the questions below to right-size the document, flag likely redundancy, and avoid treating technical complexity as product ambiguity:
 
 - Would `PRODUCT.md` still be useful if the implementation changed completely?
 - Does it contain decisions that a product/design stakeholder, public consumer, or owner of a deliberately stable cross-team contract should review?
 - Will it be an independent source of truth, rather than a less precise duplicate of `TECH.md` and its test plan?
 
-If the answers are no, do not create `PRODUCT.md`. If the user explicitly requested one, explain why it may be redundant and recommend the better artifact before proceeding.
+If the answers are no, explain why `PRODUCT.md` may be redundant and recommend the better artifact, but continue if the user still wants the document.
 
 Write specs to `specs/<id>/PRODUCT.md`, where `<id>` is one of:
 
@@ -53,7 +44,7 @@ Ticket / issue references are optional. If the user has a Linear ticket or GitHu
 
 ## Before writing
 
-Run the value test above first. If `PRODUCT.md` is warranted, gather only the context you need: directory id (Linear ticket, GitHub issue, or feature name), feature summary, target users, meaningful behavior choices, and user-visible edge cases. Use `ask_user_question` for missing context rather than guessing.
+Use the value test above to right-size the document, then gather only the context you need: directory id (Linear ticket, GitHub issue, or feature name), feature summary, target users, meaningful behavior choices, and user-visible edge cases. Use `ask_user_question` for missing context rather than guessing.
 
 ### Figma mocks
 
@@ -103,7 +94,7 @@ Do not enumerate internal races, stale events, missing messages, concurrency cas
 
 Behavior should be as long as the product ambiguity requires. Do not inflate it to reflect technical complexity or to enumerate the validation matrix. The heuristic below applies to everything around Behavior (Summary, optional sections): keep that framing thin so the spec's total length reflects the product surface, not structural overhead.
 
-- Bug fix, hardening, or refactor whose one-sentence preservation check confirms unchanged relevant consumer semantics: no product spec. Use concise technical safety and preservation guarantees in `TECH.md` if a technical design is warranted.
+- Bug fix, hardening, or refactor that preserves relevant consumer semantics: `PRODUCT.md` is usually unnecessary. If requested, keep it focused on any genuine consumer decisions and put technical safety and preservation guarantees in `TECH.md` when a technical design is warranted.
 - Trivial feature or narrow UI tweak: usually no spec.
 - Small product surface with few meaningful decisions or edge cases: framing plus Behavior typically ~30–60 lines total.
 - Medium product surface with multiple user-visible states or interactions: typically ~80–150 lines total.

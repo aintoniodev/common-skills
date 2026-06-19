@@ -1,6 +1,6 @@
 ---
 name: write-tech-spec
-description: Writes a TECH.md spec for significant features, hardening, bug fixes, or refactors after researching the current codebase and implementation constraints. Use when the user asks for a technical spec, implementation plan, or architecture doc; supports either a companion PRODUCT.md or a standalone TECH.md with concise technical safety and preservation guarantees.
+description: Writes an implementation-oriented TECH.md for significant features, hardening, bug fixes, or refactors after researching the current codebase and implementation constraints. Use when the user asks for a technical spec, implementation plan, or architecture doc.
 ---
 
 # write-tech-spec

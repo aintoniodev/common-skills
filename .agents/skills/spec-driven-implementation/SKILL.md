@@ -1,6 +1,6 @@
 ---
 name: spec-driven-implementation
-description: Drives a pragmatic spec-first workflow by choosing among no spec, PRODUCT.md only, standalone TECH.md with technical safety and preservation guarantees, or both. Use when starting significant feature or hardening work, planning agent-driven implementation, or deciding which specs should be checked into source control.
+description: Guides a pragmatic spec-first workflow for substantial work, including deciding which specs add value, getting them approved, and keeping them current through implementation. Use when starting a significant feature or hardening effort, planning agent-driven implementation, or deciding which specs should be checked into source control.
 ---
 
 # spec-driven-implementation
