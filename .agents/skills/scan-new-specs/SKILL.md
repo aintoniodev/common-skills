@@ -1,11 +1,18 @@
 ---
 name: scan-new-specs
-description: Scan warpdotdev/warp and warp-server for recently merged PRODUCT.md specs that don't yet have a corresponding docs PR in warpdotdev/docs, then post Slack nudges to a configured channel. Designed to run as a scheduled Oz ambient agent (e.g., every 2-3 days). Use when setting up the automated docs trigger, running a manual docs coverage sweep, or checking whether any new specs are missing documentation.
+description: Scan warpdotdev/warp and warp-server for recently merged PRODUCT.md specs that don't yet have a corresponding docs PR in warpdotdev/docs. When a complete spec is found, auto-generates a full docs draft PR and tags the engineer. When a spec is too thin to draft from, pings the engineer directly. Designed to run as a scheduled Oz ambient agent (e.g., every 2-3 days). Use when setting up the automated docs trigger or running a manual docs coverage sweep.
 ---
 
 # scan-new-specs
 
-Scan `warpdotdev/warp` and `warp-server` for recently merged product or tech specs that lack a corresponding docs draft, and post a Slack nudge to `#growth-docs` for each gap. This is the automated companion to the `write-feature-docs` skill — it surfaces docs gaps so the docs team can follow up with the engineer, without requiring engineers to remember to kick off the docs-drafting workflow themselves.
+Scan `warpdotdev/warp` and `warp-server` for recently merged product or tech specs that lack a corresponding docs draft. For each gap:
+
+- **If the spec is complete** — automatically run `write-feature-docs` in ambient mode to generate a full draft PR in `warpdotdev/docs`, then ping the engineer to review it
+- **If the spec is thin** — ping the engineer directly to either flesh out the spec or kick off the docs workflow manually
+
+In both cases, post a summary to `#growth-docs`.
+
+> **TODO for reviewers:** `#growth-docs` is a temporary channel for engineer pings. Identify a more appropriate eng-facing channel (e.g. a shared eng/docs channel, `#dev`, or a dedicated `#docs-requests` channel) once this workflow is established.
 
 ## Configuration
 
@@ -14,10 +21,10 @@ Before running, confirm these values (or accept the defaults):
 | Setting | Default | Description |
 |---|---|---|
 | `LOOKBACK_DAYS` | `3` | How many days back to scan for merged spec PRs |
-| `SLACK_CHANNEL` | `#growth-docs` | Slack channel to post nudges to |
-| `SLACK_WEBHOOK_URL` | Required | Slack incoming webhook URL (should be stored as a secret) |
+| `SLACK_CHANNEL` | `#growth-docs` | Slack channel for engineer pings and summaries (temporary — see TODO above) |
+| `SLACK_WEBHOOK_URL` | Required | Slack incoming webhook URL (store as a secret) |
 
-If `SLACK_WEBHOOK_URL` is not set in the environment, print the nudge messages to stdout instead so the output can be reviewed manually.
+If `SLACK_WEBHOOK_URL` is not set, print all messages to stdout instead.
 
 ## Step 1: Find recently merged specs
 
@@ -50,6 +57,18 @@ gh pr view <number> --repo warpdotdev/<repo> --json files -q '.files[].path' \
 
 Collect the list of: spec ID (the directory name under `specs/`), spec PR number and URL, PR author GitHub username, repo (`warp` or `warp-server`), and merge date.
 
+For each PR author's GitHub username, also resolve their likely Slack handle:
+
+```bash
+# Get the engineer's display name from GitHub
+ENG_NAME=$(gh api users/<github-username> -q '.name // .login')
+# Use the full name for the Slack @mention (e.g. "Harry Albert" → @Harry Albert)
+# Most Warp engineers use first+last name as their Slack handle
+# Flag the mention as unverified in the message so readers can correct it if wrong
+```
+
+Store `ENG_NAME` and `ENG_GITHUB` (the GitHub username) for use in Slack messages.
+
 ## Step 2: Check for existing docs coverage
 
 For each spec found, search `warpdotdev/docs` for an open or recently merged PR that mentions the spec ID or feature name:
@@ -63,41 +82,66 @@ gh pr list \
   --limit 10
 ```
 
-A spec is considered **covered** if any matching PR exists (open, merged, or draft). Skip covered specs — do not send a nudge.
+A spec is considered **covered** if any matching PR exists (open, merged, or draft). Skip covered specs.
 
 A spec is **uncovered** if no matching PR is found in `warpdotdev/docs`.
 
-## Step 3: Build the nudge messages
+## Step 3: Assess spec completeness
 
-For each uncovered spec, compose a Slack message. Keep it brief and actionable:
+For each uncovered spec, read `specs/<id>/PRODUCT.md` and assess whether it has enough content to auto-draft from:
+
+**Complete** (proceed to auto-draft) if ALL of the following are true:
+- File is at least 40 lines long
+- Contains a `## Behavior` section (or equivalent) with numbered invariants or user-facing steps
+- Describes at least one concrete user action (not just a summary paragraph)
+
+**Thin** (ping engineer instead) if the spec is a stub — only a Summary section, fewer than 40 lines, or no behavior detail.
+
+## Step 4: Act based on spec completeness
+
+### Path A: Complete spec → auto-draft
+
+1. Run `write-feature-docs` in **ambient mode** (see `write-feature-docs` skill for details) — this skips the interactive outline confirmation and instead embeds the outline as a checklist in the PR description
+2. The PR is opened in `warpdotdev/docs` with the draft and a checklist of items needing engineer verification
+3. Request review from the engineer (`@<github-username>`) and from `@rachaelrenk`, `@petradonka`, and `@hongyi-chen`
+4. Post this Slack message to `SLACK_CHANNEL`:
 
 ```
-📄 *New spec merged, no docs yet*
+📄 *Docs draft auto-generated*
 
 Feature: *<spec-id>* (from `<repo>`)
 Spec PR: <spec-pr-url>
-Merged by: @<github-username> on <merge-date>
+@<ENG_NAME> _(GitHub: <github-username> — verify this Slack handle is correct)_
 
-To create the docs draft, run `write-feature-docs` from `<repo>` with spec ID `<spec-id>`.
+I've opened a draft docs PR for review: <docs-pr-url>
+Please check the items marked *[UNVERIFIED]* and *[TODO]* in the PR — those are the only things that need your input.
 ```
 
-Group multiple nudges into a single Slack message when possible to avoid spamming the channel. Use a summary header if there are 3+ uncovered specs:
+### Path B: Thin spec → ping engineer
+
+Post this Slack message to `SLACK_CHANNEL`:
 
 ```
-📄 *Docs coverage scan — <N> specs need docs*
+📋 *New spec needs docs — not enough detail to auto-draft*
 
-<list of nudge items>
+Feature: *<spec-id>* (from `<repo>`)
+Spec PR: <spec-pr-url>
+@<ENG_NAME> _(GitHub: <github-username> — verify this Slack handle is correct)_
+
+The spec doesn't have enough behavior detail for me to auto-generate docs yet. Please either:
+• Add more detail to `specs/<spec-id>/PRODUCT.md` (a Behavior section with user-facing steps), OR
+• Ping the docs team in this channel and we'll draft it manually
 ```
 
-If there are no uncovered specs, post a single brief message:
+If there are no uncovered specs, post:
 
 ```
 ✅ *Docs coverage scan complete* — all recently merged specs have docs coverage.
 ```
 
-## Step 4: Post to Slack
+## Step 5: Post to Slack
 
-Send the composed message to `SLACK_CHANNEL` via the incoming webhook:
+Send each message to `SLACK_CHANNEL` via the incoming webhook:
 
 ```bash
 curl -s -X POST "$SLACK_WEBHOOK_URL" \
@@ -105,27 +149,28 @@ curl -s -X POST "$SLACK_WEBHOOK_URL" \
   --data "{\"text\": \"$MESSAGE\"}"
 ```
 
-If `SLACK_WEBHOOK_URL` is not set, print the message to stdout instead and note that no Slack notification was sent.
+If `SLACK_WEBHOOK_URL` is not set, print the message to stdout instead.
 
-## Step 5: Print a summary
+## Step 6: Print a summary
 
 Always print a run summary to stdout:
 
 ```
 scan-new-specs run summary
-  Repos scanned:        warpdotdev/warp, warp-server
-  Lookback window:      <N> days (since <date>)
-  Specs found:          <N>
-  Already covered:      <N>
-  Nudges sent:          <N>
-  Slack channel:        <channel>
+  Repos scanned:         warpdotdev/warp, warp-server
+  Lookback window:       <N> days (since <date>)
+  Specs found:           <N>
+  Already covered:       <N>
+  Auto-drafted:          <N>   (complete spec → draft PR opened)
+  Pinged (thin spec):    <N>   (incomplete spec → engineer notified)
+  Slack channel:         <channel>
 ```
 
 ## Scheduling
 
 This skill is designed to run as a **scheduled Oz ambient agent** every 2–3 days. A suggested prompt for the Oz agent configuration:
 
-> "Run scan-new-specs to check warpdotdev/warp and warp-server for newly merged PRODUCT.md specs that don't have a corresponding docs PR in warpdotdev/docs. Post nudges to #growth-docs for any gaps. Use the last 3 days as the lookback window."
+> "Run scan-new-specs to check warpdotdev/warp and warp-server for newly merged PRODUCT.md specs that don't have a corresponding docs PR in warpdotdev/docs. For complete specs, auto-generate a draft docs PR and tag the engineer. For thin specs, ping the engineer in Slack. Post a summary to #growth-docs. Use the last 3 days as the lookback window."
 
 Suggested schedule: every Monday, Wednesday, and Friday at 9am PT — frequent enough to catch specs quickly, but not noisy.
 

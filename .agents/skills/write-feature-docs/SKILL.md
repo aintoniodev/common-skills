@@ -232,7 +232,44 @@ Build the outline from your research and the engineer's targeted answers, then p
 
 ---
 
+## Ambient mode (called by scan-new-specs)
+
+When this skill is invoked by `scan-new-specs` rather than an engineer directly, it runs in **ambient mode** — there is no interactive terminal session, so the outline confirmation step must be handled differently.
+
+In ambient mode:
+
+1. Complete Steps 1 and 2 (read spec, research codebase) as normal
+2. **Skip the interactive outline confirmation.** Instead, embed the outline directly in the PR description as a checklist:
+
+```markdown
+## Docs outline (auto-generated)
+
+The following outline was generated from the spec. **@<github-username>: please review and check off each item, or leave a comment with corrections.**
+
+### Content structure
+- [ ] H1: `<feature name>`
+- [ ] Opening paragraph describes: [your 1-sentence summary]
+- [ ] Key features section covers: [which capabilities]
+- [ ] How it works section covers: [the conceptual model]
+- [ ] `## <Usage section>` with steps: [numbered list]
+- [ ] Related pages: [suggested cross-links]
+
+### Items needing engineer verification ⚠️
+- [ ] [UNVERIFIED item 1 — e.g. "Does this trigger automatically or require manual action?"]
+- [ ] [UNVERIFIED item 2]
+
+### Verified from codebase ✅
+- [What was confirmed, e.g. "Feature flag: `my_feature` in warp-internal"]
+```
+
+3. Generate the full MDX draft (Step 4) using your best judgment for any unverified items, marking them with `[TODO: engineer to verify — ...]` inline
+4. Open the draft PR (Step 5) as normal — tag the spec author and docs reviewers
+5. Do not post any interactive messages to the terminal; all output should go into the PR
+
+---
+
 ## Related skills
 
 - `write-product-spec` — produces the `PRODUCT.md` this skill reads
 - `write-tech-spec` — produces the `TECH.md` this skill reads
+- `scan-new-specs` — the scheduled agent that invokes this skill in ambient mode
