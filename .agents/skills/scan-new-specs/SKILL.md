@@ -22,9 +22,11 @@ Before running, confirm these values (or accept the defaults):
 |---|---|---|
 | `LOOKBACK_DAYS` | `3` | How many days back to scan for merged spec PRs |
 | `SLACK_CHANNEL` | `#growth-docs` | Slack channel for engineer pings and summaries (temporary — see TODO above) |
-| `SLACK_WEBHOOK_URL` | Required | Slack incoming webhook URL (store as a secret) |
+| `SLACK_BOT_TOKEN` | From `buzz` environment | Slack bot token for posting via API (already available in the `buzz` Oz environment) |
 
-If `SLACK_WEBHOOK_URL` is not set, print all messages to stdout instead.
+This skill uses the Slack API (`chat.postMessage`) rather than an incoming webhook, which enables real user pings. The `buzz` Oz environment already has the required `SLACK_BOT_TOKEN`. No new secrets setup is needed.
+
+If `SLACK_BOT_TOKEN` is not set, print all messages to stdout instead.
 
 ## Step 1: Find recently merged specs
 
@@ -57,17 +59,29 @@ gh pr view <number> --repo warpdotdev/<repo> --json files -q '.files[].path' \
 
 Collect the list of: spec ID (the directory name under `specs/`), spec PR number and URL, PR author GitHub username, repo (`warp` or `warp-server`), and merge date.
 
-For each PR author's GitHub username, also resolve their likely Slack handle:
+For each PR author's GitHub username, resolve their Slack identity:
 
 ```bash
-# Get the engineer's display name from GitHub
+# Get the engineer's name and email from GitHub
 ENG_NAME=$(gh api users/<github-username> -q '.name // .login')
-# Use the full name for the Slack @mention (e.g. "Harry Albert" → @Harry Albert)
-# Most Warp engineers use first+last name as their Slack handle
-# Flag the mention as unverified in the message so readers can correct it if wrong
+ENG_EMAIL=$(gh api users/<github-username> -q '.email // empty')
+
+# Look up their Slack user ID by email (real ping, not just a name mention)
+if [ -n "$ENG_EMAIL" ]; then
+  SLACK_USER_ID=$(curl -s -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+    "https://slack.com/api/users.lookupByEmail?email=${ENG_EMAIL}" \
+    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['user']['id'] if d.get('ok') else '')")
+fi
+
+# Use <@USER_ID> for a real ping if lookup succeeded; fall back to @name if not
+if [ -n "$SLACK_USER_ID" ]; then
+  ENG_MENTION="<@${SLACK_USER_ID}>"
+else
+  ENG_MENTION="@${ENG_NAME} _(Slack ID not found — verify this is the right person)_"
+fi
 ```
 
-Store `ENG_NAME` and `ENG_GITHUB` (the GitHub username) for use in Slack messages.
+Store `ENG_MENTION`, `ENG_NAME`, and `ENG_GITHUB` for use in Slack messages.
 
 ## Step 2: Check for existing docs coverage
 
@@ -111,9 +125,9 @@ For each uncovered spec, read `specs/<id>/PRODUCT.md` and assess whether it has 
 
 Feature: *<spec-id>* (from `<repo>`)
 Spec PR: <spec-pr-url>
-@<ENG_NAME> _(GitHub: <github-username> — verify this Slack handle is correct)_
+<@USER_ID> (GitHub: <github-username>)
 
-I've opened a draft docs PR for review: <docs-pr-url>
+I’ve opened a draft docs PR for review: <docs-pr-url>
 Please check the items marked *[UNVERIFIED]* and *[TODO]* in the PR — those are the only things that need your input.
 ```
 
@@ -126,11 +140,11 @@ Post this Slack message to `SLACK_CHANNEL`:
 
 Feature: *<spec-id>* (from `<repo>`)
 Spec PR: <spec-pr-url>
-@<ENG_NAME> _(GitHub: <github-username> — verify this Slack handle is correct)_
+<@USER_ID> (GitHub: <github-username>)
 
-The spec doesn't have enough behavior detail for me to auto-generate docs yet. Please either:
+The spec doesn’t have enough behavior detail for me to auto-generate docs yet. Please either:
 • Add more detail to `specs/<spec-id>/PRODUCT.md` (a Behavior section with user-facing steps), OR
-• Ping the docs team in this channel and we'll draft it manually
+• Ping the docs team in this channel and we’ll draft it manually
 ```
 
 If there are no uncovered specs, post:
@@ -141,15 +155,16 @@ If there are no uncovered specs, post:
 
 ## Step 5: Post to Slack
 
-Send each message to `SLACK_CHANNEL` via the incoming webhook:
+Post each message using the Slack API:
 
 ```bash
-curl -s -X POST "$SLACK_WEBHOOK_URL" \
+curl -s -X POST https://slack.com/api/chat.postMessage \
+  -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
   -H 'Content-type: application/json' \
-  --data "{\"text\": \"$MESSAGE\"}"
+  --data "{\"channel\": \"$SLACK_CHANNEL\", \"text\": \"$MESSAGE\"}"
 ```
 
-If `SLACK_WEBHOOK_URL` is not set, print the message to stdout instead.
+If `SLACK_BOT_TOKEN` is not set, print the message to stdout instead.
 
 ## Step 6: Print a summary
 
@@ -180,11 +195,11 @@ This skill does not maintain persistent state between runs. Deduplication relies
 
 **Edge case:** if a docs draft PR was opened and then *closed* (not merged), the spec will be re-flagged on the next run since closed PRs are not counted as coverage. This is intentional — a closed PR means docs work was abandoned and needs re-triggering.
 
-## Slack @mention note
+## Slack mention note
 
-Incoming webhooks post plain text only. The `@<ENG_NAME>` mention in the Slack message is a plain text name, not a real Slack user ping — the engineer won't receive a notification directly. The message will be visible in `#growth-docs` and the docs team can follow up.
+This skill uses the Slack API (`chat.postMessage`) with the `SLACK_BOT_TOKEN` from the `buzz` Oz environment. This supports real `<@USER_ID>` mentions — engineers will receive a direct notification when their spec is detected.
 
-To enable real user pings, a Slack app with `chat:write` and `users:read.email` scopes would be needed to look up Slack user IDs from GitHub email addresses. This is a future enhancement.
+The user ID is resolved by looking up the engineer's GitHub email against the Slack `users.lookupByEmail` API. If the engineer has a private GitHub email, the lookup will fail and the message will fall back to a plain-text name with a note to verify manually.
 
 ## Related skills
 
