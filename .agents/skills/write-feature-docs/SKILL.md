@@ -385,7 +385,7 @@ The following outline was generated from the spec. **@<github-username>: please 
 - [What was confirmed, e.g. "Feature flag: `my_feature` in warp-internal"]
 ```
 
-3. Generate the full MDX draft (Step 4) using your best judgment for any unverified items, marking them with `[TODO: engineer to verify — ...]` inline
+3. Generate the full MDX draft (Step 4) with this constraint: **do not draft any content derived from `TECH.md` in ambient mode.** There is no engineer present to confirm what is confidential, so any detail that came exclusively from `TECH.md` (implementation internals, data model, server architecture, private API details) must be replaced with `[TODO: engineer to verify — pulled from TECH.md, confirm this is safe to publish]`. Only `PRODUCT.md` content and codebase-verified facts are safe to draft without confirmation.
 4. **Attempt screenshots** (Step 4.5) — if computer use is available, run the predict-then-verify capture protocol for any screenshot placeholders. Include any screenshots that pass the quality gate in the draft.
 5. Open the draft PR (Step 5) as normal — tag the spec author and docs reviewers
 6. Do not post any interactive messages to the terminal; all output should go into the PR

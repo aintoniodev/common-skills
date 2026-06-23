@@ -30,27 +30,31 @@ If `SLACK_BOT_TOKEN` is not set, print all messages to stdout instead.
 
 ## Step 1: Find recently merged specs
 
-Use the GitHub CLI to search both repos for PRs merged in the last `LOOKBACK_DAYS` days that added a new `PRODUCT.md` file under `specs/`:
+List merged PRs from both repos since the lookback date, then filter by changed files. Do not use `--search "in:files"` (GitHub does not support file-path filtering in PR search) and use a portable date command that works on both Linux and macOS:
 
 ```bash
-# Find merged PRs in warpdotdev/warp (OSS repo) that added a PRODUCT.md
+# Portable date calculation (GNU/Linux and BSD/macOS compatible)
+SINCE=$(date -d "-${LOOKBACK_DAYS} days" +%Y-%m-%d 2>/dev/null \
+        || date -v-${LOOKBACK_DAYS}d +%Y-%m-%d)
+
+# List all recently merged PRs (no file-path filter -- we check files next)
 gh pr list \
   --repo warpdotdev/warp \
   --state merged \
-  --search "merged:>$(date -v-${LOOKBACK_DAYS}d +%Y-%m-%d) specs PRODUCT.md in:files" \
+  --search "merged:>${SINCE}" \
   --json number,title,author,mergedAt,url \
-  --limit 50
+  --limit 100
 
 # Repeat for warp-server
 gh pr list \
   --repo warpdotdev/warp-server \
   --state merged \
-  --search "merged:>$(date -v-${LOOKBACK_DAYS}d +%Y-%m-%d) specs PRODUCT.md in:files" \
+  --search "merged:>${SINCE}" \
   --json number,title,author,mergedAt,url \
-  --limit 50
+  --limit 100
 ```
 
-For each PR returned, verify it actually contains a new `specs/*/PRODUCT.md` by inspecting the files changed:
+For each PR returned, check whether it actually contains a new `specs/*/PRODUCT.md` by inspecting the changed files (this is the correct filter step):
 
 ```bash
 gh pr view <number> --repo warpdotdev/<repo> --json files -q '.files[].path' \
@@ -85,20 +89,29 @@ Store `ENG_MENTION`, `ENG_NAME`, and `ENG_GITHUB` for use in Slack messages.
 
 ## Step 2: Check for existing docs coverage
 
-For each spec found, search `warpdotdev/docs` for an open or recently merged PR that mentions the spec ID or feature name:
+For each spec found, check `warpdotdev/docs` for an open/draft or merged PR that mentions the spec ID. Run two separate queries to avoid counting closed-unmerged PRs as coverage:
 
 ```bash
+# Check for open or draft PRs
 gh pr list \
   --repo warpdotdev/docs \
-  --state all \
+  --state open \
   --search "<spec-id>" \
   --json number,title,state,url \
-  --limit 10
+  --limit 5
+
+# Check for merged PRs
+gh pr list \
+  --repo warpdotdev/docs \
+  --state merged \
+  --search "<spec-id>" \
+  --json number,title,state,url \
+  --limit 5
 ```
 
-A spec is considered **covered** if any matching PR exists (open, merged, or draft). Skip covered specs.
+A spec is considered **covered** if either query returns results (open, draft, or merged PR exists). Skip covered specs.
 
-A spec is **uncovered** if no matching PR is found in `warpdotdev/docs`.
+A spec is **uncovered** if neither query returns results. Closed-unmerged PRs do **not** count as coverage — a closed PR signals abandoned work that needs re-triggering.
 
 ## Step 3: Assess spec completeness
 
@@ -155,13 +168,17 @@ If there are no uncovered specs, post:
 
 ## Step 5: Post to Slack
 
-Post each message using the Slack API:
+Post each message using the Slack API. Build the JSON payload with `jq` to safely handle newlines, quotes, and backslashes in `$MESSAGE`:
 
 ```bash
-curl -s -X POST https://slack.com/api/chat.postMessage \
-  -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
-  -H 'Content-type: application/json' \
-  --data "{\"channel\": \"$SLACK_CHANNEL\", \"text\": \"$MESSAGE\"}"
+jq -n \
+  --arg channel "$SLACK_CHANNEL" \
+  --arg text "$MESSAGE" \
+  '{channel: $channel, text: $text}' \
+| curl -s -X POST https://slack.com/api/chat.postMessage \
+    -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+    -H 'Content-type: application/json' \
+    -d @-
 ```
 
 If `SLACK_BOT_TOKEN` is not set, print the message to stdout instead.
