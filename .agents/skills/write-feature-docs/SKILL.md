@@ -218,7 +218,7 @@ After generating the draft, submit it to `warpdotdev/docs` automatically:
 
 ## No-spec fallback
 
-If `specs/<id>/PRODUCT.md` and `specs/<id>/TECH.md` don't exist, research the codebase first — do not start by interviewing the engineer.
+If `specs/<id>/PRODUCT.md` and `specs/<id>/TECH.md` don't exist, research the codebase first before interviewing the engineer.
 
 **Research steps:**
 1. Search `warpdotdev/warp-internal` (or `warp-server` depending on context) for the feature name and related terms: `gh search code "<feature-name>" --repo warpdotdev/warp-internal`
