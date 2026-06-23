@@ -1,11 +1,11 @@
 ---
 name: scan-new-specs
-description: Scan warp-internal and warp-server for recently merged PRODUCT.md specs that don't yet have a corresponding docs PR in warpdotdev/docs, then post Slack nudges to a configured channel. Designed to run as a scheduled Oz ambient agent (e.g., every 2-3 days). Use when setting up the automated docs trigger, running a manual docs coverage sweep, or checking whether any new specs are missing documentation.
+description: Scan warpdotdev/warp and warp-server for recently merged PRODUCT.md specs that don't yet have a corresponding docs PR in warpdotdev/docs, then post Slack nudges to a configured channel. Designed to run as a scheduled Oz ambient agent (e.g., every 2-3 days). Use when setting up the automated docs trigger, running a manual docs coverage sweep, or checking whether any new specs are missing documentation.
 ---
 
 # scan-new-specs
 
-Scan `warp-internal` and `warp-server` for recently merged product or tech specs that lack a corresponding docs draft, and post a Slack nudge to `#growth-docs` for each gap. This is the automated companion to the `write-feature-docs` skill — it surfaces docs gaps so the docs team can follow up with the engineer, without requiring engineers to remember to kick off the docs-drafting workflow themselves.
+Scan `warpdotdev/warp` and `warp-server` for recently merged product or tech specs that lack a corresponding docs draft, and post a Slack nudge to `#growth-docs` for each gap. This is the automated companion to the `write-feature-docs` skill — it surfaces docs gaps so the docs team can follow up with the engineer, without requiring engineers to remember to kick off the docs-drafting workflow themselves.
 
 ## Configuration
 
@@ -24,9 +24,9 @@ If `SLACK_WEBHOOK_URL` is not set in the environment, print the nudge messages t
 Use the GitHub CLI to search both repos for PRs merged in the last `LOOKBACK_DAYS` days that added a new `PRODUCT.md` file under `specs/`:
 
 ```bash
-# Find merged PRs in warp-internal that added a PRODUCT.md
+# Find merged PRs in warpdotdev/warp (OSS repo) that added a PRODUCT.md
 gh pr list \
-  --repo warpdotdev/warp-internal \
+  --repo warpdotdev/warp \
   --state merged \
   --search "merged:>$(date -v-${LOOKBACK_DAYS}d +%Y-%m-%d) specs PRODUCT.md in:files" \
   --json number,title,author,mergedAt,url \
@@ -48,7 +48,7 @@ gh pr view <number> --repo warpdotdev/<repo> --json files -q '.files[].path' \
   | grep -E '^specs/.+/PRODUCT\.md$'
 ```
 
-Collect the list of: spec ID (the directory name under `specs/`), spec PR number and URL, PR author GitHub username, repo (`warp-internal` or `warp-server`), and merge date.
+Collect the list of: spec ID (the directory name under `specs/`), spec PR number and URL, PR author GitHub username, repo (`warp` or `warp-server`), and merge date.
 
 ## Step 2: Check for existing docs coverage
 
@@ -113,7 +113,7 @@ Always print a run summary to stdout:
 
 ```
 scan-new-specs run summary
-  Repos scanned:        warp-internal, warp-server
+  Repos scanned:        warpdotdev/warp, warp-server
   Lookback window:      <N> days (since <date>)
   Specs found:          <N>
   Already covered:      <N>
@@ -125,7 +125,7 @@ scan-new-specs run summary
 
 This skill is designed to run as a **scheduled Oz ambient agent** every 2–3 days. A suggested prompt for the Oz agent configuration:
 
-> "Run scan-new-specs to check warp-internal and warp-server for newly merged PRODUCT.md specs that don't have a corresponding docs PR in warpdotdev/docs. Post nudges to #growth-docs for any gaps. Use the last 3 days as the lookback window."
+> "Run scan-new-specs to check warpdotdev/warp and warp-server for newly merged PRODUCT.md specs that don't have a corresponding docs PR in warpdotdev/docs. Post nudges to #growth-docs for any gaps. Use the last 3 days as the lookback window."
 
 Suggested schedule: every Monday, Wednesday, and Friday at 9am PT — frequent enough to catch specs quickly, but not noisy.
 

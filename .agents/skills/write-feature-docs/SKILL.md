@@ -1,25 +1,26 @@
 ---
 name: write-feature-docs
-description: Draft the first ~80% documentation page for a new Warp feature from its PRODUCT.md and/or TECH.md spec. Use when an engineer has written a spec and needs to produce a first-pass MDX draft for the warpdotdev/docs repo. Also handles features without specs via an interactive interview. Invoke this skill whenever an engineer mentions writing docs for a feature, drafting a docs page, creating feature documentation, starting the eng-docs workflow, or converting a spec into documentation. Works from warp-internal or warp-server.
+description: Draft a complete documentation page for a new Warp feature from its PRODUCT.md and/or TECH.md spec. Use when an engineer has written a spec and needs to produce a first-pass MDX draft for the warpdotdev/docs repo. Also handles features without specs by researching the codebase first. Invoke this skill whenever an engineer mentions writing docs for a feature, drafting a docs page, creating feature documentation, starting the eng-docs workflow, or converting a spec into documentation. Works from warp-internal or warp-server.
 ---
 
 # write-feature-docs
 
-Draft the first ~80% documentation page for a new Warp feature. You read the feature's spec, generate a concise outline for the engineer to confirm, then produce a complete MDX draft ready for a draft PR to `warpdotdev/docs`.
+Draft a complete documentation page for a new Warp feature. You read the feature's spec, verify technical claims by researching the codebase yourself, present a concise outline for the engineer to confirm, then produce a complete MDX draft and open a draft PR in `warpdotdev/docs` — tagging the docs team for review.
 
-The engineer's job is to verify **technical accuracy** — not polish prose, fix formatting, or know docs conventions. Your job is everything else.
+The engineer's job is to confirm what you couldn't verify from the spec and code — not to do a full accuracy review, not to polish prose, not to know docs conventions.
 
 ## The workflow
 
-1. Find the spec files for the feature
-2. Generate a concise outline and present it in the terminal
-3. Engineer confirms the outline is accurate (or replies with corrections)
-4. Generate the full ~80% MDX draft from the confirmed outline
-5. Tell the engineer how to submit it as a draft PR to `warpdotdev/docs`
+1. Find and read the spec files
+2. Research the codebase to verify technical claims — minimize what the engineer needs to check
+3. Generate a concise outline, distinguishing verified facts from open questions
+4. Engineer confirms or corrects
+5. Generate the complete MDX draft
+6. Open a draft PR in `warpdotdev/docs` and tag the docs team
 
 ---
 
-## Step 1: Find the spec
+## Step 1: Find and read the spec
 
 Ask the engineer for the spec ID if they haven't provided it. The spec ID is one of:
 - A Linear ticket number: `APP-1234`
@@ -30,15 +31,32 @@ Look for the spec files at:
 - `specs/<id>/PRODUCT.md` — primary source: user-facing behavior, what and why
 - `specs/<id>/TECH.md` — secondary source: implementation, data model
 
-Read both files if both exist. `PRODUCT.md` is the primary driver for the docs content. Reference `TECH.md` only to check technical accuracy and understand implementation constraints — don't let implementation details leak into the user-facing prose.
+Read both files if both exist. `PRODUCT.md` is the primary driver for the docs content.
+
+**When reading `TECH.md`:** Before incorporating anything from it, identify content that looks like internal implementation detail — database schema, internal service names, private API endpoints, confidential server architecture. Present these flagged items to the engineer and ask them to confirm what's safe to include in public docs and what should stay internal. Do not include anything marked confidential in the draft.
 
 If neither file exists, skip to [No-spec fallback](#no-spec-fallback).
 
 ---
 
-## Step 2: Generate and present the outline
+## Step 2: Research the codebase
 
-Read the spec(s) and generate a concise outline. **The outline has no prose** — its purpose is to give the engineer a quick technical accuracy check before you write anything.
+Before presenting the outline, use the GitHub CLI to verify as much technical content as possible yourself — reducing what the engineer needs to confirm to only what you genuinely cannot determine from the code.
+
+Things to verify from code:
+- **Feature flag name**: `gh search code "<feature-name>" --repo warpdotdev/warp-internal`
+- **UI strings**: search for user-visible button labels, menu item names, or setting names referenced in the spec
+- **Settings paths**: confirm exact Settings menu paths (e.g., `**Settings** > **AI** > **Knowledge**`)
+- **CLI commands or keyboard shortcuts** mentioned in the spec
+- **Related features**: identify other features that cross-reference this one for "Related pages"
+
+For each claim you verify from code, mark it confirmed. For claims you can't verify (UI behavior not in code, product intent, behavior of unreleased features), flag them as `[UNVERIFIED]` in the outline — those are the only things the engineer needs to focus on.
+
+---
+
+## Step 3: Generate and present the outline
+
+Generate a concise outline — no prose. The outline shows what you've confirmed from research and exactly what still needs engineer input.
 
 Print the outline to the terminal in this format:
 
@@ -64,22 +82,26 @@ CONTENT SECTIONS
         ...
   ## Related pages — [cross-links to suggest]
 
-KEY TERMS TO VERIFY
-  - "<Term>": [your understanding — confirm this is accurate]
-  - "<Term>": [your understanding — confirm this is accurate]
+VERIFIED FROM CODEBASE ✅
+  - [e.g., "Feature flag: `my_feature_flag` confirmed in warp-internal"]
+  - [e.g., "Settings path: confirmed as Settings > AI > Agents > Permissions"]
+
+NEEDS YOUR CONFIRMATION ⚠️
+  - [e.g., "Step 3 — does the sync trigger automatically or require a manual action?"]
+  - [e.g., "Is the 'Export' button visible before the feature flag is enabled?"]
 ```
 
 After printing the outline, say:
 
-> "Does this outline accurately represent the feature? Reply with any corrections or say 'looks good' to proceed to the full draft."
+> "I've verified what I could from the codebase. Please check the items marked ⚠️ above and reply with any corrections, or say 'looks good' to proceed."
 
-Wait for the engineer's reply before continuing. Their reply is a free-form terminal response — they may correct steps, rename concepts, add missing behavior, or just confirm. Incorporate their feedback before drafting.
+Wait for the engineer's reply before continuing. Incorporate their feedback, then draft.
 
 ---
 
-## Step 3: Generate the MDX draft
+## Step 4: Generate the MDX draft
 
-Generate a complete `.mdx` file based on the confirmed outline. The output should be ready to drop into `src/content/docs/<section>/<filename>.mdx` in the `warpdotdev/docs` repo.
+Generate a complete `.mdx` file based on the confirmed outline. The output is ready to drop directly into `warpdotdev/docs`.
 
 ### Template structure
 
@@ -169,41 +191,44 @@ These conventions come from the Warp docs style guide and must be followed:
 - `:::danger` — destructive or irreversible actions
 - `:::tip` — confirmation of expected outcomes
 
-**What to leave as placeholders**
-Mark these with `[TODO: docs reviewer — ...]` in the draft:
-- Screenshots (you can't capture live UI)
+**What to leave as `[TODO: docs reviewer — ...]` placeholders**
+- Screenshots (not captured by this skill)
 - Video/GIF embeds
 - Exact Settings path if the feature hasn't shipped yet
 - Final URL path (docs team confirms placement)
-- Any behavior you're uncertain about after reading the spec
+- Any behavior that remained unverified after engineer confirmation
+
+---
+
+## Step 5: Open the draft PR
+
+After generating the draft, submit it to `warpdotdev/docs` automatically:
+
+1. Clone `warpdotdev/docs` to a temp directory (or use the local clone if available)
+2. Write the MDX file to `src/content/docs/<proposed-section>/<filename>.mdx`
+3. Add a placeholder entry to `src/sidebar.ts` under the appropriate section (mark it `[TODO: docs reviewer — confirm placement]`)
+4. Commit and push on a new branch named `docs/<spec-id>-feature-draft`
+5. Open a **draft PR** in `warpdotdev/docs` with a description that includes:
+   - The feature name and spec ID
+   - A link to the original spec PR
+   - A list of all `[UNVERIFIED]` and `[TODO]` items in the draft for reviewer attention
+6. Request review from `@rachaelrenk`, `@petradonka`, and `@hongyi-chen`
 
 ---
 
 ## No-spec fallback
 
-If `specs/<id>/PRODUCT.md` and `specs/<id>/TECH.md` don't exist, use `ask_user_question` to interview the engineer. Ask about:
+If `specs/<id>/PRODUCT.md` and `specs/<id>/TECH.md` don't exist, research the codebase first — do not start by interviewing the engineer.
 
-1. What this feature does in one sentence
-2. The 2–3 most important things a user can do with it
-3. The step-by-step actions a user takes to use it
-4. Any prerequisites, limitations, or gotchas the reader needs to know
-5. Any related features or pages to cross-reference
+**Research steps:**
+1. Search `warpdotdev/warp-internal` (or `warp-server` depending on context) for the feature name and related terms: `gh search code "<feature-name>" --repo warpdotdev/warp-internal`
+2. Read the most relevant source files to understand what the feature does
+3. Check for spec files under a different ID: `gh api repos/warpdotdev/warp-internal/git/trees/HEAD?recursive=1 | grep -i spec`
+4. Review recent merged PRs related to the feature: `gh pr list --search "<feature-name>" --state merged --repo warpdotdev/warp-internal --limit 10`
 
-Build the outline from their answers, then present it for confirmation (Step 2) before drafting. Don't skip the outline confirmation step — it's the engineer's technical accuracy check regardless of whether a spec exists.
+**After research,** build as complete a picture as possible, then use `ask_user_question` only for specific gaps you couldn't fill from the code — not as a broad interview. Frame the questions concretely: "I found the feature in `app/src/ai/`. Based on the code, here's what I understand: [summary]. I couldn't determine these two things: [specific questions]."
 
----
-
-## Step 4: Handoff instructions
-
-After presenting the draft, tell the engineer:
-
-> "Here's your ~80% draft. To hand it off for docs review:
->
-> 1. Save this file to the `warpdotdev/docs` repo at the proposed path above
-> 2. Add an entry for it in `src/sidebar.ts` under the appropriate section
-> 3. Open a **draft PR** in `warpdotdev/docs` — feature docs PRs don't need to be kept private before launch
->
-> The docs team will take it from there: terminology, readability, screenshots, final placement, navigation, and redirects."
+Build the outline from your research and the engineer's targeted answers, then proceed to Step 3 (outline confirmation) before drafting.
 
 ---
 
