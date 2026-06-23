@@ -192,11 +192,99 @@ These conventions come from the Warp docs style guide and must be followed:
 - `:::tip` — confirmation of expected outcomes
 
 **What to leave as `[TODO: docs reviewer — ...]` placeholders**
-- Screenshots (not captured by this skill)
+- Screenshots where computer use fails the quality gate, is unavailable, or the feature isn't yet shipped
 - Video/GIF embeds
 - Exact Settings path if the feature hasn't shipped yet
 - Final URL path (docs team confirms placement)
 - Any behavior that remained unverified after engineer confirmation
+
+---
+
+## Step 4.5: Capture screenshots via computer use (if available)
+
+After generating the draft, attempt to capture screenshots for any `[TODO: docs reviewer — screenshot needed]` placeholders using computer use. This step is **optional** — only run it if the `computer_use` tool is available. If computer use is unavailable, leave all placeholders as-is.
+
+### Decide which screenshots to attempt
+
+Only attempt screenshots where **all** of the following are true:
+- The feature is already shipped (not behind a feature flag or unreleased)
+- The UI state can be reliably navigated to programmatically
+- The placeholder specifies a concrete UI surface (not vague like "show the feature working")
+
+Skip screenshots that require account-specific state, specific data, or content that would expose sensitive information.
+
+### Pre-capture setup
+
+Before taking any screenshot:
+1. Launch Warp at a consistent window size (use the `warp-internal-computer-use` skill for launch guidance)
+2. Navigate to the relevant UI surface or trigger the relevant feature state
+3. **Wait** for all animations to complete and the UI to be fully settled
+4. Dismiss any unrelated popups, notifications, or toasts that aren't part of the feature being documented
+5. Close any sidebar panels or panes not relevant to this screenshot
+6. **Verify no sensitive data is visible**: check for tokens, API keys, private repo names, customer workspace data, email addresses, or personal information. If any is visible, do not take the screenshot.
+
+### Capture
+
+Take the screenshot. Then apply the quality gate before including it.
+
+### Quality gate — only include the screenshot if ALL pass
+
+- [ ] Text in the screenshot is **legible** at the target display size
+- [ ] The documented UI element is **clearly the focal point** — not buried, cropped out, or obscured
+- [ ] **No sensitive data** is visible (tokens, private repos, personal info, customer data)
+- [ ] UI is in a **stable, non-loading state** — no spinners, skeleton screens, or transitional states
+- [ ] The screenshot **accurately represents** the feature behavior described in the surrounding text
+- [ ] The screenshot would make sense at its target rendered width without looking blurry or oversized
+
+If any item fails, discard the screenshot and leave the `[TODO: docs reviewer — screenshot]` placeholder.
+
+### Sizing — choose the closest standard width
+
+- **Full-width (default)** — full-window captures, broad product surfaces, layouts where surrounding context matters
+- **~375px** — narrow UI surfaces: popovers, command menus, side panes, dropdowns, focused interaction flows
+- **~300–350px** — tightly cropped controls, chips, buttons, tooltips, small menus
+
+Crop unnecessary empty space before sizing. Keep sequences of screenshots in the same section at the same width.
+
+### Placement — where to insert the screenshot in the MDX
+
+Insert each screenshot:
+- **Immediately after** the paragraph that introduces the UI or state it shows
+- **Near configuration instructions** — show settings panels or menus where users make choices
+- **Near status or result explanations** — show completion states or outputs that help users recognize success
+- **At the start of a visual feature page** — use a broad orientation screenshot early
+
+Do **not** add a screenshot for every step in a procedure. Only add one where the visual genuinely aids comprehension.
+
+### MDX format
+
+```mdx
+<figure>
+  <img
+    src="../../../assets/<section>/<feature-name>-<ui-state>.png"
+    alt="[Descriptive alt text: what the image shows, not just 'screenshot']"
+  />
+  <figcaption>[Caption: complete sentence, ≤10 words, orient don’t instruct, no marketing language, sentence case, ends with period.]</figcaption>
+</figure>
+```
+
+**Alt text rules:**
+- Describe what the image shows, not just "screenshot"
+- ✅ `alt="Agent permissions settings with 'Always allow' selected for file reads"`
+- ❌ `alt="screenshot"` or `alt=""`
+
+**Caption rules:**
+- Orient the reader — describe what is shown, not what to do
+- Complete sentence, ≤10 words ideally, never exceed ~20 words
+- No marketing language (avoid "easily," "quickly," "powerful," "at a glance")
+- Don't repeat the prose — the caption adds context, not an echo
+- Don't list everything visible — name the subject
+- ✅ `<figcaption>The Environments page in the Oz web app.</figcaption>`
+- ❌ `<figcaption>Click the toast to jump to the agent’s session.</figcaption>` (procedural — put this in body text)
+
+**File naming:** lowercase, hyphens, descriptive — e.g. `agent-mode-permissions-panel.png`
+
+**File location:** Save PNGs to `src/assets/<section>/` in `warpdotdev/docs` (Astro optimizes them automatically).
 
 ---
 
