@@ -178,6 +178,14 @@ Suggested schedule: every Monday, Wednesday, and Friday at 9am PT — frequent e
 
 This skill does not maintain persistent state between runs. Deduplication relies entirely on whether a docs PR exists in `warpdotdev/docs` — if a PR is open or merged for a spec, it won't be flagged again. This means a spec will continue to generate nudges until someone opens a docs PR for it (even a draft).
 
+**Edge case:** if a docs draft PR was opened and then *closed* (not merged), the spec will be re-flagged on the next run since closed PRs are not counted as coverage. This is intentional — a closed PR means docs work was abandoned and needs re-triggering.
+
+## Slack @mention note
+
+Incoming webhooks post plain text only. The `@<ENG_NAME>` mention in the Slack message is a plain text name, not a real Slack user ping — the engineer won't receive a notification directly. The message will be visible in `#growth-docs` and the docs team can follow up.
+
+To enable real user pings, a Slack app with `chat:write` and `users:read.email` scopes would be needed to look up Slack user IDs from GitHub email addresses. This is a future enhancement.
+
 ## Related skills
 
 - `write-feature-docs` — the skill engineers run to generate the docs draft after being nudged

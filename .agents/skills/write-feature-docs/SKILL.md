@@ -16,7 +16,8 @@ The engineer's job is to confirm what you couldn't verify from the spec and code
 3. Generate a concise outline, distinguishing verified facts from open questions
 4. Engineer confirms or corrects
 5. Generate the complete MDX draft
-6. Open a draft PR in `warpdotdev/docs` and tag the docs team
+6. Attempt screenshot capture via computer use (if available)
+7. Open a draft PR in `warpdotdev/docs` and tag the docs team
 
 ---
 
@@ -385,8 +386,9 @@ The following outline was generated from the spec. **@<github-username>: please 
 ```
 
 3. Generate the full MDX draft (Step 4) using your best judgment for any unverified items, marking them with `[TODO: engineer to verify — ...]` inline
-4. Open the draft PR (Step 5) as normal — tag the spec author and docs reviewers
-5. Do not post any interactive messages to the terminal; all output should go into the PR
+4. **Attempt screenshots** (Step 4.5) — if computer use is available, run the predict-then-verify capture protocol for any screenshot placeholders. Include any screenshots that pass the quality gate in the draft.
+5. Open the draft PR (Step 5) as normal — tag the spec author and docs reviewers
+6. Do not post any interactive messages to the terminal; all output should go into the PR
 
 ---
 
