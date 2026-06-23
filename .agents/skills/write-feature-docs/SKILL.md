@@ -223,20 +223,54 @@ Before taking any screenshot:
 5. Close any sidebar panels or panes not relevant to this screenshot
 6. **Verify no sensitive data is visible**: check for tokens, API keys, private repo names, customer workspace data, email addresses, or personal information. If any is visible, do not take the screenshot.
 
-### Capture
+### Capture protocol: predict → capture → verify → retry once
 
-Take the screenshot. Then apply the quality gate before including it.
+This is a structured self-verification loop. Do not skip it — it's the primary guard against wrong-state, wrong-crop, and wrong-framing captures.
 
-### Quality gate — only include the screenshot if ALL pass
+**Step 1: State the expectation before capturing**
+
+Before taking any screenshot, write out what you expect to see:
+
+```
+CAPTURE EXPECTATION
+  Subject:            [The specific UI element or surface being documented]
+  Expected elements:  [2-3 specific things that MUST be visible — e.g. a panel title, a button, a specific setting]
+  Expected state:     [The UI state — e.g. "Settings panel open", "Modal visible", "Feature active and showing output"]
+  Must not contain:   [Anything that must NOT be visible — e.g. sensitive data, unrelated popups, loading spinners]
+```
+
+**Step 2: Capture**
+
+Take the screenshot.
+
+**Step 3: View and verify against the expectation**
+
+Use computer use to view the captured image, then check it against the expectation:
+
+- Is the stated **subject** visible and clearly the focal point?
+- Are all **expected elements** present?
+- Is the UI in the **expected state** (not a transitional or loading state)?
+- Is anything from **must not contain** visible?
+- Is text **legible** at the target display width?
+
+If all pass → proceed to the quality gate.
+
+If any fail → **attempt once more**: re-navigate to the UI state, wait longer for the UI to settle, then re-capture and re-verify.
+
+If the second attempt also fails → **discard** the screenshot and leave the `[TODO: docs reviewer — screenshot]` placeholder. Do not include a screenshot you can't verify.
+
+**Step 4: Quality gate — final check before including**
 
 - [ ] Text in the screenshot is **legible** at the target display size
 - [ ] The documented UI element is **clearly the focal point** — not buried, cropped out, or obscured
 - [ ] **No sensitive data** is visible (tokens, private repos, personal info, customer data)
 - [ ] UI is in a **stable, non-loading state** — no spinners, skeleton screens, or transitional states
-- [ ] The screenshot **accurately represents** the feature behavior described in the surrounding text
+- [ ] Screenshot **matches the capture expectation** stated before capture
 - [ ] The screenshot would make sense at its target rendered width without looking blurry or oversized
 
 If any item fails, discard the screenshot and leave the `[TODO: docs reviewer — screenshot]` placeholder.
+
+> **Maximum attempts per screenshot: 2.** If both fail, move on.
 
 ### Sizing — choose the closest standard width
 
