@@ -442,7 +442,7 @@ def html_template(data: dict) -> str:
         <body>
           <main class="d3-walkthrough-shell">
             <header class="d3-walkthrough-header">
-              <div class="d3-kicker">Warp PR walkthrough</div>
+              <div class="d3-kicker">PR walkthrough</div>
               <h1>{html.escape(title)}</h1>
               <div class="d3-meta-row"><span>{html.escape(base)} ← {html.escape(head)}</span>{f'<a href="{html.escape(pr_url)}" target="_blank" rel="noreferrer">Open PR</a>' if pr_url else ''}</div>
               <p class="d3-summary">{html.escape(summary)}</p>
@@ -512,7 +512,7 @@ def sample_data() -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Emit reusable D3 PR walkthrough graph tour snippets.")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--css", action="store_true", help="Print Brandalf-aligned D3 graph CSS.")
+    group.add_argument("--css", action="store_true", help="Print the default D3 graph CSS.")
     group.add_argument("--runtime", action="store_true", help="Print pinned-CDN D3 runtime and graph renderer.")
     group.add_argument("--template", action="store_true", help="Print a complete HTML template from graph JSON.")
     group.add_argument("--sample-data", action="store_true", help="Print sample graph JSON.")

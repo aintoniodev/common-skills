@@ -1,180 +1,66 @@
 ---
 name: fix-errors
-description: Fix compilation errors, linting issues, and test failures in the warp Rust codebase. Covers presubmit checks, WASM-specific errors, and running specific tests. Use when the user hits build errors, clippy or fmt failures, test failures, or needs to run or interpret presubmit before a PR.
+description: Fix build, compilation, lint, formatting, and test errors in a repository. Use when the user hits build errors, lint or format failures, or test failures, or needs to run and interpret the repository's checks before a PR.
 ---
 
 # fix-errors
 
-Fix compilation errors, linting issues, and test failures in the warp Rust codebase.
+Fix build, lint, formatting, and test errors in a repository.
 
 ## Overview
 
 This skill helps resolve common issues encountered during development, including:
-- Compilation errors (unused imports, type mismatches, etc.)
-- Linting failures (clippy warnings)
+- Build and compilation errors (syntax errors, unresolved imports, type mismatches, etc.)
+- Lint failures
 - Formatting violations
-- WASM-specific errors
 - Test failures
 
-Before opening or updating a pull request, all presubmit checks must pass.
+Before opening or updating a pull request, the repository's checks must pass.
 
-## Presubmit Checks
+## Workflow
 
-Run all presubmit checks at once:
+1. **Run the repository's own checks.** Use whatever the repo documents (a check script, a `Makefile` target, or the language toolchain's format/lint/build/test commands). If you are unsure which commands to run, look for a contributing guide, build config, or CI workflow that lists them.
+2. **Read the full output and categorize the errors.** Group related errors by type (see categories below); fixing one often resolves others.
+3. **Fix one class of error at a time.** Make the smallest change that addresses the root cause, not just the symptom.
+4. **Re-run the narrow check** for the class you fixed to confirm it passes and did not introduce new errors.
+5. **Run the repository's full check** once individual classes are resolved, and repeat until everything passes.
 
-```bash
-./script/presubmit
-```
+## Common Error Categories
 
-This runs formatting, linting, and all tests. If it passes, you're ready to open a PR.
+These are language-agnostic categories; map them to your repository's toolchain.
 
-### Individual Checks
+### Build / compilation
+- **Unresolved or unused imports** — add the correct import, or remove unused ones flagged by the compiler. Search the codebase to find the correct module path.
+- **Type mismatches** — pass arguments of the expected type (convert, borrow, or reference as needed).
+- **Signature changes** — when a function adds or changes a parameter, update all call sites.
+- **Struct/record field changes** — when a type adds or removes fields, update every place it is constructed or destructured.
+- **Enum/variant changes** — when adding a new variant, update exhaustive matches/switches with appropriate handling.
 
-Run checks separately when debugging specific issues:
+### Lint
+- Resolve each warning at its root cause rather than blanket-suppressing it. Only suppress a lint when there is a clear, justified reason.
 
-**Rust formatting:**
-```bash
-cargo fmt -- --check
-```
+### Formatting
+- Run the repository's formatter and commit the result.
 
-**Clippy (full workspace):**
-```bash
-cargo clippy --workspace --exclude warp_completer --all-targets --all-features --tests -- -D warnings
-cargo clippy -p warp_completer --all-targets --tests -- -D warnings
-```
-
-**WASM Clippy:**
-```bash
-cargo clippy --target wasm32-unknown-unknown --profile release-wasm-debug_assertions --no-deps
-```
-
-**Objective-C/C/C++ formatting:**
-```bash
-./script/run-clang-format.py -r --extensions 'c,h,cpp,m' ./crates/warpui/src/ ./app/src/
-```
-
-**All tests:**
-```bash
-cargo nextest run --no-fail-fast --workspace --exclude command-signatures-v2
-cargo nextest run -p warp_completer --features v2
-```
-
-**Doc tests:**
-```bash
-cargo test --doc
-```
-
-## Running Specific Tests
-
-**Single package:**
-```bash
-cargo nextest run -p <package_name>
-```
-
-**Filter by test name:**
-```bash
-cargo nextest run -E 'test(<substring>)'
-```
-
-**Specific package with filter:**
-```bash
-cargo nextest run -p <package_name> -E 'test(<substring>)'
-```
-
-**With output (no capture):**
-```bash
-cargo nextest run -p <package> --nocapture
-```
-
-## Common Error Types
-
-### Unused Imports
-Remove unused `use` statements identified by the compiler.
-
-### Unused Constants
-Remove constants that are defined but never used.
-
-### Unknown Imports
-Add the correct `use` statement for undefined types. Search the codebase to find the correct module path.
-
-### Type Mismatches
-Update function calls to pass arguments of the correct type. Common fixes:
-- Use `.as_str()` instead of `.clone()` when a `&str` is expected
-- Use `&value` when a reference is needed
-- Use `.to_string()` when `String` is expected but `&str` is provided
-
-### Struct Field Changes
-When a struct adds/removes fields, update all places where it's constructed or destructured:
-- Struct initialization
-- Pattern matching (`match`, `if let`)
-- Destructuring assignments
-
-### Function Signature Changes
-When a function adds a new parameter, update all call sites to provide the new argument:
-- For `bool` params: pass `true` or `false` based on context
-- For `Option<T>` params: pass `None` as default or `Some(value)` if needed
-
-### Enum Variant Changes
-When adding a new enum variant, update exhaustive `match` statements:
-- Add a new match arm with appropriate handling
-- Mirror the implementation pattern of similar variants
-
-### Incorrect Trait Implementation
-Fix trait implementations that return the wrong type or don't satisfy trait bounds.
-
-### WASM-Specific Errors
-
-WASM builds (`wasm32-unknown-unknown` target) don't support filesystem operations. Code that uses filesystem APIs must be gated behind the `local_fs` feature flag.
-
-**Common WASM errors:**
-- Dead code warnings for code only used in non-WASM builds
-- Unused code that's only relevant when `local_fs` is available
-- Tests that require filesystem access
-
-**Fixes:**
-
-**Gate tests behind `local_fs`:**
-```rust
-#[test]
-#[cfg(feature = "local_fs")]
-fn test_find_git_repo_with_worktree() {
-    // Test that uses filesystem operations
-}
-```
-
-**Conditionally allow dead code for types only used when `local_fs` is enabled:**
-```rust
-#[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
-#[derive(Clone, EnumDiscriminants, Serialize)]
-pub enum ExampleType {
-    // Variants only used when local_fs is enabled
-    Variant1,
-    Variant2,
-    Variant3,
-}
-```
-
-WASM errors are discovered by running:
-
-```bash
-cargo clippy --target wasm32-unknown-unknown --profile release-wasm-debug_assertions --no-deps
-```
+### Test failures
+- Read the assertion or error to understand expected vs. actual behavior.
+- Fix the code when the test encodes correct behavior; update the test only when the behavior intentionally changed.
+- Re-run the specific failing test before re-running the full suite.
 
 ## Best Practices
 
 **Before fixing:**
-- Read the full error message to understand the root cause
-- Check if multiple errors are related (fixing one may resolve others)
-- For trait/type errors, verify you understand the expected vs actual types
-- For WASM errors, check if code needs to be gated behind `local_fs`
+- Read the full error message to understand the root cause.
+- Check whether multiple errors are related (fixing one may resolve others).
+- For type or signature errors, confirm you understand the expected vs. actual types.
 
 **When fixing:**
-- Fix one error type at a time when there are multiple issues
-- Run `cargo check` frequently to verify fixes
-- For WASM errors, run WASM clippy to verify the fix
-- For complex changes, run relevant tests after fixing
+- Fix one error type at a time when there are multiple issues.
+- Re-run a fast build/check frequently to verify progress.
+- Run relevant tests after non-trivial changes.
 
 **After fixing:**
-- Always run `cargo fmt` and `cargo clippy` before pushing
-- Run the full presubmit script before opening or updating a PR. Use the `create-pr` skill for more detailed instructions
-- Verify tests pass in the areas you modified
+- Run the repository's full set of checks before opening or updating a PR. Use the `create-pr` skill for more detailed instructions.
+- Verify tests pass in the areas you modified.
+
+A repo may provide a `fix-errors-local` companion that documents its exact toolchain commands and repo-specific error patterns.

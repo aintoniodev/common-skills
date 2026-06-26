@@ -83,7 +83,7 @@ Use the same `ask_user_question` flow for these inconsistencies. For review-comm
 - Acknowledge without changes.
 - `Other...`
 
-If the user chooses to append a follow-up comment, draft the comment for approval before posting it. Do not post GitHub comments without explicit approval. Prefix agent-authored follow-up comments with `[Warp Agent]`.
+If the user chooses to append a follow-up comment, draft the comment for approval before posting it. Do not post GitHub comments without explicit approval. Prefix agent-authored follow-up comments with a clear agent attribution (for example, your agent's name) so reviewers can see the response was agent-authored.
 
 ## Security spec validation
 
@@ -125,7 +125,7 @@ Call `ask_user_question` with options like:
 - `Skip cloud computer-use validation`
 - `Other...`
 
-If the user chooses cloud validation, launch multiple Oz cloud agents with computer use enabled as part of this validation flow. Split the product spec's user-visible behaviors into independent validation assignments, such as one child agent per major flow, user role, platform, or acceptance-criteria group. Each child agent should receive:
+If the user chooses cloud validation, and your environment supports launching cloud agents with computer use, launch multiple such agents as part of this validation flow. Split the product spec's user-visible behaviors into independent validation assignments, such as one child agent per major flow, user role, platform, or acceptance-criteria group. Each child agent should receive:
 
 - the repository and branch or PR to validate
 - the relevant spec excerpts and product behavior under test
@@ -232,7 +232,7 @@ After applying selected resolutions:
 
 1. Review `git diff` to confirm the changes match the user's decisions.
 2. Run relevant validation based on changed files and repository conventions.
-3. If the repository has documented test, lint, typecheck, or presubmit commands, prefer those.
+3. If the repository has documented test, lint, typecheck, or other check commands, prefer those.
 4. If validation is too expensive or cannot run, explain why and list what remains unverified.
 5. Re-check the resolved mismatches against the final diff.
 
@@ -253,7 +253,7 @@ If the user chooses to commit:
 2. Ask for or propose a concise commit message if one is not already clear.
 3. Stage only the intended files.
 4. Commit non-interactively.
-5. Include `Co-Authored-By: Oz <oz-agent@warp.dev>` in the commit message.
+5. Include your agent's co-author attribution trailer in the commit message.
 
 If the user chooses to push, push the current branch to `origin` after the commit succeeds. If commit or push fails, report the failure and do not retry destructively.
 

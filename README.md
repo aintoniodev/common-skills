@@ -32,9 +32,9 @@ Each skill lives in its own directory under `.agents/skills/`. The only required
 
 ### Development workflow
 
-- `create-pr` — guidance for preparing and opening pull requests.
-- `diagnose-ci-failures` — workflow for inspecting GitHub CI failures and producing a fix plan.
-- `fix-errors` — guidance for fixing build, lint, formatting, and test failures.
+- `create-pr` — generic guidance for preparing and opening pull requests; specialize per repo with a `create-pr-local` companion.
+- `diagnose-ci-failures` — generic workflow for inspecting GitHub CI failures and producing a fix plan; specialize per repo with a `diagnose-ci-failures-local` companion.
+- `fix-errors` — generic guidance for fixing build, lint, formatting, and test failures; specialize per repo with a `fix-errors-local` companion.
 - `resolve-merge-conflicts` — workflow and helper script for resolving git conflicts with compact context.
 - `review-pr` — produces structured PR review feedback from local diff artifacts.
 - `check-impl-against-spec` — compares PR implementation changes against provided spec context during review.
@@ -66,6 +66,23 @@ Some skills copied here may still contain repository-specific examples, paths, c
 - separating common workflow guidance from local repository conventions
 - moving repo-specific overrides back into the repository that needs them
 - keeping descriptions broad enough to trigger in multiple repositories, but specific enough to avoid unrelated tasks
+
+## Conventions
+
+### Local specialization companions (`*-local`)
+
+A generic core skill can be specialized for a specific repository or product by adding a companion skill named `<core>-local` in the consuming repository (for example, `create-pr-local`, `fix-errors-local`, `diagnose-ci-failures-local`, `pr-walkthrough-local`). The companion declares its parent in frontmatter and layers only repo/brand-specific guidance on top of the generic core:
+
+- `specializes: <core-name>` — the core skill this companion extends.
+- `specializes_source: <org>/<repo>:.agents/skills/<core-name>` — where the parent core lives, so it can be installed if missing.
+
+A companion should not redefine the core's methodology, schemas, or safety rules. It should only add the local conventions (toolchain commands, CI check names, brand tokens, etc.) that the core intentionally leaves open. Include a short "Prerequisite: install the parent skill" note so the relationship is explicit.
+
+### Soft / optional references
+
+A generic core may name an optional runtime tool or workflow, but only with a fallback so the skill still works when that tool is absent (for example, "if the `insert_code_review_comments` tool is available, use it; otherwise fall back to plain-text or `gh`").
+
+A generic core must NOT name a private or brand-specific skill. Brand-specific or private behavior belongs in a local companion (for example, a `pr-walkthrough-local` that supplies brand styling), not in the shared core.
 
 ## Usage
 
