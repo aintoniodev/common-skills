@@ -83,12 +83,20 @@ Include the issue ID in the PR title (e.g., `[WARP-1234] Add new feature`). Do t
 
 ### 5. Open the PR
 
-Use the PR template at `.github/pull_request_template.md` when opening PRs.
+**Always read `.github/pull_request_template.md` and use it as the body source of truth.**
+
+Workflow:
+1. Read the template: `cat .github/pull_request_template.md`
+2. Copy it to a temp file: `cp .github/pull_request_template.md /tmp/pr-body.md`
+3. Fill in every section of the template in place—replace placeholder text with real content, fill checkboxes that were actually verified (leave others unchecked), and mark sections that don't apply as "N/A" or remove them. Do NOT paste a free-form description above or below the template.
+4. Create the PR using the filled file.
+
+Do **not** use `--body` with inline text or `--fill`—always write the filled template to a file and pass it via `--body-file` to avoid shell escaping issues and to preserve the template structure.
 
 Add changelog entries when appropriate using the format at the bottom of the PR template. Some examples:
 - Feature: "Global search in files across your current directories. Use CMD-F/CTRL-SHIFT-F to open."
 - Improvement: "Added horizontal autoscrolling when jumping to line/column."
-- Bug fix: "Fixed session viewer input being cleared when agent runs commands.
+- Bug fix: "Fixed session viewer input being cleared when agent runs commands."
 
 **CLI workflow:**
 
@@ -98,22 +106,20 @@ Add changelog entries when appropriate using the format at the bottom of the PR 
   ```
   Exit code 0 if PR exists, 1 if not.
 
-- **Create a new PR:**
+- **Create a new PR (always use the filled template):**
   ```bash
-  # With title and body
-  gh pr create --title "Title" --body "Description" --draft
+  # 1. Copy and fill the template
+  cp .github/pull_request_template.md /tmp/pr-body.md
+  # (edit /tmp/pr-body.md to fill in all sections)
 
-  # Auto-fill from commits
-  gh pr create --fill --draft
-
-  # Use PR template file
-  gh pr create --body-file .github/pull_request_template.md --title "Title" --draft
+  # 2. Create the PR from the filled file
+  gh pr create --title "Title" --body-file /tmp/pr-body.md --draft
   ```
-  Key flags: `--draft` / `-d`, `--fill` / `-f`, `--body-file` / `-F`, `--web` / `-w`
+  Key flags: `--draft` / `-d`, `--body-file` / `-F`, `--web` / `-w`
 
 - **Update an existing PR:**
   ```bash
-  gh pr edit --title "New title" --body "New body"
+  gh pr edit --title "New title" --body-file /tmp/pr-body.md
   gh pr edit --add-reviewer username --add-label bug
   ```
 
