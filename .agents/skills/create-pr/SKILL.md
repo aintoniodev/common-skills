@@ -1,19 +1,17 @@
 ---
 name: create-pr
-description: Create a pull request in the warp repository for the current branch. Use when the user mentions opening a PR, creating a pull request, submitting changes for review, or preparing code for merge.
+description: Create a pull request for the current branch. Use when the user mentions opening a PR, creating a pull request, submitting changes for review, or preparing code for merge.
 ---
 
 # create-pr
 
 ## Overview
 
-This guide covers best practices for creating pull requests in the warp repository, including merging master, running presubmit checks, linking Linear tasks, ensuring appropriate test coverage, and structuring your PR for effective review.
+This guide covers best practices for creating pull requests, including merging the base branch, running presubmit checks, linking issue tracker tasks, ensuring appropriate test coverage, and structuring your PR for effective review. The exact commands and conventions vary by repo — adapt accordingly.
 
 ## Related Skills
 
 - `fix-errors` - Fix presubmit failures (formatting, linting, tests) before opening PR
-- `warp-integration-test` - Add or update integration coverage for user-visible flows, regressions, and P0 use cases
-- `add-feature-flag` - Gate changes behind feature flags
 
 ## Pre-PR Checklist
 
@@ -36,18 +34,11 @@ If the PR includes code changes, run the relevant presubmit checks before openin
 ./script/presubmit
 ```
 
-`./script/presubmit` runs:
-- `cargo fmt` - Code formatting
-- `cargo clippy` - Linting with all warnings as errors
-- All tests (unit, doc, and integration)
-If the PR is documentation-only (for example, skills, markdown, or other non-code content), you do not need to run `cargo fmt` or `cargo clippy` just to open or update the PR.
+The presubmit script typically runs formatting, linting, and all tests. The exact checks vary by repo — consult the repo's README or presubmit script for details.
+
+If the PR is documentation-only (skills, markdown, or non-code content), presubmit checks are generally not required.
 
 If presubmit fails for a code-changing PR, use the `fix-errors` skill to resolve issues.
-
-**You must run `cargo fmt` and `cargo clippy` before:**
-- Opening a new PR that includes code changes
-- Pushing new commits that include code changes to an existing PR branch
-- Any reviewed branch update that changes code
 
 ### 3. Review your changes
 
@@ -78,17 +69,14 @@ When possible, PRs should be associated with a Linear task. Use the Linear MCP t
 **Branch naming convention:**
 Remote branches should be prefixed with your name (e.g., `zheng/feature`, `alice/fix-bug`).
 
-**How to link PRs to Linear:**
-Include the issue ID in the PR title (e.g., `[WARP-1234] Add new feature`). Do this **before** creating the PR for automatic linking.
+**How to link PRs to issue tracker:**
+If the repo uses Linear or another issue tracker, include the issue ID in the PR title (e.g., `[PROJ-1234] Add new feature`). Do this **before** creating the PR for automatic linking.
 
 ### 5. Open the PR
 
 Use the PR template at `.github/pull_request_template.md` when opening PRs.
 
-Add changelog entries when appropriate using the format at the bottom of the PR template. Some examples:
-- Feature: "Global search in files across your current directories. Use CMD-F/CTRL-SHIFT-F to open."
-- Improvement: "Added horizontal autoscrolling when jumping to line/column."
-- Bug fix: "Fixed session viewer input being cleared when agent runs commands.
+Add changelog entries when appropriate, following the repo's changelog format if one exists.
 
 **CLI workflow:**
 
@@ -159,27 +147,7 @@ Follow the repository's local testing conventions for guidance on writing unit t
 
 ### UI components need layout validation tests
 
-**All UI components (implementations of `View`) should have a simple unit test** to validate that they can be laid out without a panic.
-
-This provides high-level coverage over rendering "safety" (though not "correctness"):
-
-```rust
-#[test]
-fn test_component_can_layout() {
-    use warpui::App;
-    use warp::test_util::{terminal::initialize_app_for_terminal_view, add_window_with_terminal};
-    
-    App::test((), |mut app| async move {
-        initialize_app_for_terminal_view(&mut app);
-        let term = add_window_with_terminal(&mut app, None);
-        
-        // Render the component - should not panic
-        term.update(&mut app, |view, ctx| {
-            // Create and layout your component
-        });
-    })
-}
-```
+If the repo has a UI framework, all UI components should have a simple unit test to validate they can be laid out or rendered without panicking. Follow the repo's local testing conventions for the specific pattern and imports to use.
 
 ### Ask before skipping integration coverage
 
@@ -190,7 +158,7 @@ Prefer a direct choice such as:
 - `Yes, add an integration test before creating the PR`
 - `No, continue without an integration test`
 
-If the user chooses to add one, use the `warp-integration-test` skill.
+If the user chooses to add one, use the repo's integration test skill or documentation to implement it.
 
 ### P0 use cases require integration tests
 
@@ -201,9 +169,9 @@ If the user chooses to add one, use the `warp-integration-test` skill.
 Integration tests should:
 - Exercise the full user-facing flow
 - Validate end-to-end functionality
-- Be placed in the `integration/` directory
+- Be placed in the repo's designated integration test directory
 
-Use the `warp-integration-test` skill for implementation details, test registration steps, and validation workflow.
+Consult the repo's integration test skill or documentation for implementation details.
 
 ## PR Description Guidelines
 
@@ -218,7 +186,7 @@ Your PR summary under the "Description" section should include:
 1. **Monitor CI checks** - Ensure all automated checks pass
 2. **Respond to review comments** - Address feedback promptly
 3. **Keep the PR up to date** - Merge master if conflicts arise
-4. **Re-run relevant validation** - After making changes based on review feedback. For code changes, re-run `cargo fmt`/`cargo clippy` (and other relevant checks); for documentation-only changes, this is not required.
+4. **Re-run relevant validation** - After making changes based on review feedback. For code changes, re-run the repo's formatting and linting checks; for documentation-only changes, this is generally not required.
 
 ## Best Practices
 
@@ -227,4 +195,4 @@ Your PR summary under the "Description" section should include:
 - **Self-review first** - Review your own diff before requesting review
 - **Update tests** - Ensure test coverage reflects your changes
 - **Document breaking changes** - Call out any API changes or breaking modifications
-- **Use feature flags** - Gate risky changes behind feature flags when appropriate (see the `add-feature-flag` skill)
+- **Use feature flags** - Gate risky changes behind feature flags when appropriate

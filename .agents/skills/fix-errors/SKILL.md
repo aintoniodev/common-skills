@@ -1,11 +1,11 @@
 ---
 name: fix-errors
-description: Fix compilation errors, linting issues, and test failures in the warp Rust codebase. Covers presubmit checks, WASM-specific errors, and running specific tests. Use when the user hits build errors, clippy or fmt failures, test failures, or needs to run or interpret presubmit before a PR.
+description: Fix compilation errors, linting issues, and test failures in the active codebase. Covers presubmit checks, WASM-specific errors, and running specific tests. Use when the user hits build errors, clippy or fmt failures, test failures, or needs to run or interpret presubmit before a PR.
 ---
 
 # fix-errors
 
-Fix compilation errors, linting issues, and test failures in the warp Rust codebase.
+Fix compilation errors, linting issues, and test failures in the active codebase.
 
 ## Overview
 
@@ -39,25 +39,22 @@ cargo fmt -- --check
 
 **Clippy (full workspace):**
 ```bash
-cargo clippy --workspace --exclude warp_completer --all-targets --all-features --tests -- -D warnings
-cargo clippy -p warp_completer --all-targets --tests -- -D warnings
+cargo clippy --workspace --all-targets --all-features --tests -- -D warnings
 ```
+
+> Note: Some repos exclude specific packages (e.g. `--exclude <package>`) or require separate clippy invocations per package. Adapt these flags to the active repo's conventions.
 
 **WASM Clippy:**
 ```bash
 cargo clippy --target wasm32-unknown-unknown --profile release-wasm-debug_assertions --no-deps
 ```
 
-**Objective-C/C/C++ formatting:**
-```bash
-./script/run-clang-format.py -r --extensions 'c,h,cpp,m' ./crates/warpui/src/ ./app/src/
-```
-
 **All tests:**
 ```bash
-cargo nextest run --no-fail-fast --workspace --exclude command-signatures-v2
-cargo nextest run -p warp_completer --features v2
+cargo nextest run --no-fail-fast --workspace
 ```
+
+> Note: Repos may exclude specific packages with `--exclude <package>` or require additional test invocations with specific features. Check the repo's presubmit script or README for the exact commands.
 
 **Doc tests:**
 ```bash
