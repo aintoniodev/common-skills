@@ -1,4 +1,4 @@
-name: Update downstream common-skills lockfiles
+name: Update downstream skills lockfiles
 
 on:
   push:
@@ -11,18 +11,42 @@ permissions:
 
 jobs:
   update-lockfile:
-    name: Update ${{ matrix.repository }}
+    name: Update ${{ matrix.lock_label }} in ${{ matrix.repository }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
+          # common-skills lock (skills-lock.json) in each downstream consumer.
           - repository: warpdotdev/warp
             repository_name: warp
             base_branch: master
+            source: warpdotdev/common-skills
+            lock_file: skills-lock.json
+            lock_label: common skills
+            branch_prefix: common-skills-lock
           - repository: warpdotdev/warp-server
             repository_name: warp-server
             base_branch: develop
+            source: warpdotdev/common-skills
+            lock_file: skills-lock.json
+            lock_label: common skills
+            branch_prefix: common-skills-lock
+          # warp-skills lock (warp-skills-lock.json) in each downstream consumer.
+          - repository: warpdotdev/warp
+            repository_name: warp
+            base_branch: master
+            source: warpdotdev/warp-skills
+            lock_file: warp-skills-lock.json
+            lock_label: warp-skills
+            branch_prefix: warp-skills-lock
+          - repository: warpdotdev/warp-server
+            repository_name: warp-server
+            base_branch: develop
+            source: warpdotdev/warp-skills
+            lock_file: warp-skills-lock.json
+            lock_label: warp-skills
+            branch_prefix: warp-skills-lock
     steps:
       - name: Check out common-skills
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -63,8 +87,8 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ vars.COMMON_SKILLS_SYNC_APP_ID }}
-          private-key: ${{ secrets.COMMON_SKILLS_SYNC_APP_PRIVATE_KEY }}
+          app-id: ${{ vars.SKILLS_SYNC_APP_ID }}
+          private-key: ${{ secrets.SKILLS_SYNC_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ matrix.repository_name }}
           permission-contents: write
@@ -82,8 +106,16 @@ jobs:
       - name: Update target lockfile
         id: update
         run: |
-          common-skills/scripts/update_common_skills_lock --repo-root target
-          if git -C target diff --quiet -- skills-lock.json; then
+          if [[ ! -f "target/${{ matrix.lock_file }}" ]]; then
+            echo "::notice::target/${{ matrix.lock_file }} is absent in ${{ matrix.repository }}; nothing to refresh."
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          common-skills/scripts/update_common_skills_lock \
+            --repo-root target \
+            --source "${{ matrix.source }}" \
+            --lock-file "${{ matrix.lock_file }}"
+          if git -C target diff --quiet -- "${{ matrix.lock_file }}"; then
             echo "changed=false" >> "${GITHUB_OUTPUT}"
           else
             echo "changed=true" >> "${GITHUB_OUTPUT}"
@@ -96,172 +128,20 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           path: target
-          add-paths: skills-lock.json
+          add-paths: ${{ matrix.lock_file }}
           base: ${{ matrix.base_branch }}
-          branch: automation/common-skills-lock-${{ github.sha }}
+          branch: automation/${{ matrix.branch_prefix }}-${{ github.sha }}
           delete-branch: true
-          commit-message: Update common skills lock for ${{ steps.source.outputs.label }}
-          title: Update common skills lock for ${{ steps.source.outputs.label }}
+          commit-message: Update ${{ matrix.lock_label }} lock for ${{ steps.source.outputs.label }}
+          title: Update ${{ matrix.lock_label }} lock for ${{ steps.source.outputs.label }}
           body: |
             ## Description
 
-            Updates `skills-lock.json` to distribute the common skills from [${{ steps.source.outputs.label }}](${{ steps.source.outputs.url }}).
+            Updates `${{ matrix.lock_file }}` to distribute the ${{ matrix.lock_label }} from [${{ steps.source.outputs.label }}](${{ steps.source.outputs.url }}).
 
             ## Testing
 
-            Generated with `scripts/update_common_skills_lock`.
-
-      - name: Request source author as reviewer
-        if: steps.create-pr.outputs.pull-request-number != '' && steps.source.outputs.author != ''
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PULL_REQUEST_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
-          REVIEWER: ${{ steps.source.outputs.author }}
-          TARGET_REPOSITORY: ${{ matrix.repository }}
-        run: |
-          if gh api \
-            --method POST \
-            "repos/${TARGET_REPOSITORY}/pulls/${PULL_REQUEST_NUMBER}/requested_reviewers" \
-            -f "reviewers[]=${REVIEWER}" >/dev/null; then
-            echo "Requested ${REVIEWER} as reviewer."
-          else
-            echo "::warning::Could not request ${REVIEWER} as reviewer; the pull request remains open."
-          fi
-
-      - name: Enable squash auto-merge
-        if: steps.create-pr.outputs.pull-request-number != ''
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PULL_REQUEST_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
-          TARGET_REPOSITORY: ${{ matrix.repository }}
-        run: gh pr merge "${PULL_REQUEST_NUMBER}" --repo "${TARGET_REPOSITORY}" --auto --squash
-
-  update-warp-skills-lockfile:
-    name: Update warp-skills lock in ${{ matrix.repository }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - repository: warpdotdev/warp
-            repository_name: warp
-            base_branch: master
-          - repository: warpdotdev/warp-server
-            repository_name: warp-server
-            base_branch: develop
-    steps:
-      - name: Resolve source pull request
-        id: source
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_REPOSITORY: ${{ github.repository }}
-          SOURCE_SHA: ${{ github.sha }}
-        run: |
-          source_pr="$(
-            gh api "repos/${SOURCE_REPOSITORY}/commits/${SOURCE_SHA}/pulls" \
-              --jq '[.[] | select(.merged_at != null and .base.ref == "main")][0] // {}'
-          )"
-          source_pr_number="$(jq -r '.number // empty' <<< "${source_pr}")"
-          source_pr_author="$(jq -r '.user.login // empty' <<< "${source_pr}")"
-          source_pr_url="$(jq -r '.html_url // empty' <<< "${source_pr}")"
-
-          if [[ -n "${source_pr_number}" ]]; then
-            {
-              echo "author=${source_pr_author}"
-              echo "label=warpdotdev/common-skills#${source_pr_number}"
-              echo "url=${source_pr_url}"
-            } >> "${GITHUB_OUTPUT}"
-          else
-            {
-              echo "author="
-              echo "label=${SOURCE_SHA}"
-              echo "url=https://github.com/${SOURCE_REPOSITORY}/commit/${SOURCE_SHA}"
-            } >> "${GITHUB_OUTPUT}"
-          fi
-
-      - name: Generate target GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ vars.COMMON_SKILLS_SYNC_APP_ID }}
-          private-key: ${{ secrets.COMMON_SKILLS_SYNC_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ matrix.repository_name }}
-          permission-contents: write
-          permission-pull-requests: write
-
-      - name: Check out target repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          repository: ${{ matrix.repository }}
-          ref: ${{ matrix.base_branch }}
-          path: target
-          token: ${{ steps.app-token.outputs.token }}
-          persist-credentials: false
-
-      - name: Update target warp-skills lockfile
-        id: update
-        env:
-          SKILLS_CLI_VERSION: "1.5.6"
-          WARP_SKILLS_SOURCE: warpdotdev/warp-skills
-        run: |
-          lock_file="target/warp-skills-lock.json"
-          if [[ ! -f "${lock_file}" ]]; then
-            echo "::notice::${lock_file} is absent in ${{ matrix.repository }}; nothing to refresh."
-            echo "changed=false" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-
-          work_dir="$(mktemp -d "${TMPDIR:-/tmp}/warp-skills-lock.XXXXXX")"
-          cp "${lock_file}" "${work_dir}/skills-lock.json"
-          git -C "${work_dir}" init --quiet
-          if ! (
-            cd "${work_dir}"
-            npx --yes "skills@${SKILLS_CLI_VERSION}" add "${WARP_SKILLS_SOURCE}" -a warp -s '*' -y --copy
-          ) < /dev/null; then
-            echo "::warning::Failed to regenerate warp-skills-lock.json from ${WARP_SKILLS_SOURCE}; skipping."
-            echo "changed=false" >> "${GITHUB_OUTPUT}"
-            rm -rf "${work_dir}"
-            exit 0
-          fi
-
-          if [[ ! -f "${work_dir}/skills-lock.json" ]]; then
-            echo "::warning::warp-skills update did not produce a candidate lockfile; skipping."
-            echo "changed=false" >> "${GITHUB_OUTPUT}"
-            rm -rf "${work_dir}"
-            exit 0
-          fi
-
-          if cmp -s "${lock_file}" "${work_dir}/skills-lock.json"; then
-            echo "warp-skills-lock.json is already up to date."
-            echo "changed=false" >> "${GITHUB_OUTPUT}"
-          else
-            cp "${work_dir}/skills-lock.json" "${lock_file}"
-            echo "changed=true" >> "${GITHUB_OUTPUT}"
-          fi
-          rm -rf "${work_dir}"
-
-      - name: Create downstream pull request
-        if: steps.update.outputs.changed == 'true'
-        id: create-pr
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          path: target
-          add-paths: warp-skills-lock.json
-          base: ${{ matrix.base_branch }}
-          branch: automation/warp-skills-lock-${{ github.sha }}
-          delete-branch: true
-          commit-message: Update warp-skills lock for ${{ steps.source.outputs.label }}
-          title: Update warp-skills lock for ${{ steps.source.outputs.label }}
-          body: |
-            ## Description
-
-            Refreshes `warp-skills-lock.json` from [warpdotdev/warp-skills](https://github.com/warpdotdev/warp-skills), alongside the common skills lock from [${{ steps.source.outputs.label }}](${{ steps.source.outputs.url }}).
-
-            ## Testing
-
-            Regenerated with the `skills` CLI against `warpdotdev/warp-skills`.
+            Generated with `scripts/update_common_skills_lock --source ${{ matrix.source }} --lock-file ${{ matrix.lock_file }}`.
 
       - name: Request source author as reviewer
         if: steps.create-pr.outputs.pull-request-number != '' && steps.source.outputs.author != ''
