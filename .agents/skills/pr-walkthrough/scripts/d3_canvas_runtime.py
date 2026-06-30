@@ -442,7 +442,7 @@ def html_template(data: dict) -> str:
         <body>
           <main class="d3-walkthrough-shell">
             <header class="d3-walkthrough-header">
-              <div class="d3-kicker">PR walkthrough</div>
+              <div class="d3-kicker">Warp PR walkthrough</div>
               <h1>{html.escape(title)}</h1>
               <div class="d3-meta-row"><span>{html.escape(base)} ← {html.escape(head)}</span>{f'<a href="{html.escape(pr_url)}" target="_blank" rel="noreferrer">Open PR</a>' if pr_url else ''}</div>
               <p class="d3-summary">{html.escape(summary)}</p>

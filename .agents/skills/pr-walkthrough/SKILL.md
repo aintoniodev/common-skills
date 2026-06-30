@@ -25,7 +25,7 @@ Use the neutral fallback styling tokens below for the walkthrough's visual desig
 Apply these default tokens:
 - Use a dark surface: `#121212` for the page background, `#1e1e1d`/`#292929` for panels, and `#faf9f6` or `#ffffff` for text.
 - Use a pink accent `#a43787` intentionally for active states, key links, focus rings, selected tour steps, and high-emphasis labels. Use secondary green `#34895c`, blue `#2e5d9e`, and purple `#754dac` as graph colors.
-- Use a clean sans-serif for UI/body text with `DM Sans, system-ui, sans-serif` fallback. Use a monospace for code, metadata, canvas labels, coordinates, file paths, and machine-oriented snippets with `Roboto Mono, ui-monospace, monospace` fallback.
+- Use Matter for UI/body text with `DM Sans, system-ui, sans-serif` fallback. Use Matter Mono for code, metadata, canvas labels, coordinates, file paths, and machine-oriented snippets with `Roboto Mono, ui-monospace, monospace` fallback.
 - Keep copy truth-seeking, technical, concise, and verifiable. Avoid marketing superlatives and generic buzzwords.
 - Prefer sharp, documentation-like containers with subtle borders. Use rounded corners only where they improve readability for cards, node callouts, tooltips, and buttons.
 Recommended graph colors:

@@ -83,7 +83,7 @@ Use the same `ask_user_question` flow for these inconsistencies. For review-comm
 - Acknowledge without changes.
 - `Other...`
 
-If the user chooses to append a follow-up comment, draft the comment for approval before posting it. Do not post GitHub comments without explicit approval. Prefix agent-authored follow-up comments with a clear agent attribution (for example, your agent's name) so reviewers can see the response was agent-authored.
+If the user chooses to append a follow-up comment, draft the comment for approval before posting it. Do not post GitHub comments without explicit approval. Prefix agent-authored follow-up comments with a clear agent attribution (for example, your agent's name) so reviewers can see the response was agent-authored. For the canonical attribution prefix your team uses, follow the shared `agent-attribution` skill (hosted in `warp-skills`) when one is available rather than hardcoding a specific identity here.
 
 ## Security spec validation
 
@@ -125,7 +125,7 @@ Call `ask_user_question` with options like:
 - `Skip cloud computer-use validation`
 - `Other...`
 
-If the user chooses cloud validation, and your environment supports launching cloud agents with computer use, launch multiple such agents as part of this validation flow. Split the product spec's user-visible behaviors into independent validation assignments, such as one child agent per major flow, user role, platform, or acceptance-criteria group. Each child agent should receive:
+If the user chooses cloud validation, and your environment supports launching cloud agents with computer use, launch multiple such agents as part of this validation flow. Warp's cloud agents (Oz) are one option here — using them is optional, but see the docs at https://docs.warp.dev/agent-platform/cloud-agents/overview/ for setup and capabilities. Split the product spec's user-visible behaviors into independent validation assignments, such as one child agent per major flow, user role, platform, or acceptance-criteria group. Each child agent should receive:
 
 - the repository and branch or PR to validate
 - the relevant spec excerpts and product behavior under test

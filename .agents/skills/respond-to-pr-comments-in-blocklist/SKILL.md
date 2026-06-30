@@ -5,7 +5,9 @@ description: Walk users through PR review comments, fetching and displaying them
 
 # Respond to PR comments in blocklist
 
-Use this skill to respond to PR comments on the current branch. If comments are already visible in the conversation, typically from a built-in PR-comments workflow if one is available, continue from that context. If comments are not already visible, fetch and display them first, then guide the user through each actionable comment, collect an explicit decision, make requested code changes, and only then ask for approval before posting GitHub replies or resolving review threads.
+Use this skill to respond to PR comments on the current branch. If comments are already visible in the conversation, typically from the bundled `/pr-comments` skill when running inside the Warp terminal, continue from that context. If comments are not already visible, fetch and display them first, then guide the user through each actionable comment, collect an explicit decision, make requested code changes, and only then ask for approval before posting GitHub replies or resolving review threads.
+
+Rendering comments into the Warp block list (via the bundled `/pr-comments` skill and the `insert_code_review_comments` tool) is only available inside the Warp terminal. Outside Warp, fall back to `gh` or plain-text display (see Preconditions); the rest of this workflow is unchanged.
 
 ## Preconditions
 

@@ -113,7 +113,7 @@ For large features, the implementer may optionally keep a `DECISIONS.md` file su
 
 ## Example Behavior section
 
-A sample Behavior section for a hypothetical feature: rendering GitHub-flavored Markdown tables in an application's rendered output blocks. It demonstrates the expected shape — numbered, testable, user-perspective invariants that enumerate defaults, edge cases, malformed input, streaming, selection/copy, search, sharing, theming, and cross-surface consistency, with one inline open question.
+A sample Behavior section for a hypothetical feature: rendering GitHub-flavored Markdown tables in block-based output. It demonstrates the expected shape — numbered, testable, user-perspective invariants that enumerate defaults, edge cases, malformed input, streaming, selection/copy, search, sharing, theming, and cross-surface consistency, with one inline open question. (Optional aside: Warp renders Markdown tables richly in its block output — see https://x.com/warpdotdev/status/2053888801911767076 — though that is not required to use this skill.)
 
 ````markdown
 ## Behavior
@@ -154,9 +154,9 @@ A sample Behavior section for a hypothetical feature: rendering GitHub-flavored 
 
 13. Search within a block (find-in-block) matches against cell text content. Matches highlight in place in the rendered cell; navigating matches scrolls the table into view, including horizontally if the match is in an off-screen column.
 
-14. Sharing or exporting a block (share link, save as file) preserves the original markdown source, not the rendered form.
+14. Sharing or exporting a block (Warp Drive if installed, share link, save as file) preserves the original markdown source, not the rendered form.
 
-15. Theming: table borders, header backgrounds, alternating row shading (if any), and link/code styles all come from the active theme. No hard-coded colors.
+15. Theming: table borders, header backgrounds, alternating row shading (if any), and link/code styles all come from the active theme (for example, the active Warp theme, if installed). No hard-coded colors.
 
 16. Markdown tables render consistently wherever block-list markdown already renders — command output, agent responses, and any other block type that supports inline markdown. The same input produces the same table in each surface.
 

@@ -19,7 +19,7 @@ Before opening or updating a pull request, the repository's checks must pass.
 
 ## Workflow
 
-1. **Run the repository's own checks.** Use whatever the repo documents (a check script, a `Makefile` target, or the language toolchain's format/lint/build/test commands). If you are unsure which commands to run, look for a contributing guide, build config, or CI workflow that lists them.
+1. **Run the repository's own checks.** Use whatever the repo documents (a check script, a `Makefile` target, or the language toolchain's format/lint/build/test commands). If you are unsure which commands to run, look for an `AGENTS.md`, a contributing guide, a build config, or a CI workflow that lists them. A repo may also provide an optional `fix-errors-local` companion that names its exact toolchain commands.
 2. **Read the full output and categorize the errors.** Group related errors by type (see categories below); fixing one often resolves others.
 3. **Fix one class of error at a time.** Make the smallest change that addresses the root cause, not just the symptom.
 4. **Re-run the narrow check** for the class you fixed to confirm it passes and did not introduce new errors.

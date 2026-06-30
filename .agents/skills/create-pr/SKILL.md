@@ -29,7 +29,7 @@ Resolve any merge conflicts locally before opening the PR.
 
 ### 2. Run the repository's checks for code changes
 
-If the PR includes code changes, run the repository's own formatting, linting, build, and test checks before opening or updating it. Use whatever the repo documents (for example, a check script, a `Makefile` target, or the language toolchain's format/lint/test commands).
+If the PR includes code changes, run the repository's own formatting, linting, build, and test checks before opening or updating it. Consult the repo's `AGENTS.md`, which usually documents the exact format/lint/build/test commands; otherwise fall back to whatever the repo documents (for example, a check script, a `Makefile` target, or the language toolchain's commands). When a repo provides an optional `create-pr-local` companion skill, it documents the exact check commands to run.
 
 If the PR is documentation-only (for example, skills, markdown, or other non-code content), you do not need to run code formatting or linting just to open or update the PR.
 
@@ -39,8 +39,6 @@ If checks fail for a code-changing PR, use the `fix-errors` skill to resolve iss
 - Opening a new PR that includes code changes
 - Pushing new commits that include code changes to an existing PR branch
 - Any reviewed branch update that changes code
-
-A repo may provide a `create-pr-local` companion that documents the exact check commands to run.
 
 ### 3. Review your changes
 
@@ -76,7 +74,7 @@ Include the issue ID in the PR title (e.g., `[APP-1234] Add new feature`). Do th
 
 ### 5. Open the PR
 
-Use the PR template at `.github/pull_request_template.md` when the repository provides one.
+Use the PR template at `.github/pull_request_template.md` when the repository provides one. If the repo provides an optional `create-pr-local` companion skill, follow its PR conventions (labels, reviewers, template specifics) as well.
 
 **CLI workflow:**
 
@@ -117,6 +115,8 @@ When committing changes or creating a PR, include your agent's co-author attribu
 ```
 Co-Authored-By: <Your Agent> <agent@example.com>
 ```
+
+For the exact trailer and reply prefix your team uses, follow the optional attribution companion when one is available — a repo's `create-pr-local` skill or a shared team `agent-attribution` skill — rather than hardcoding a specific agent identity here.
 
 ## Testing Requirements
 
