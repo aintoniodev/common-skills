@@ -23,13 +23,13 @@ For example:
 
 `specs/` should contain only ticket-named directories as direct children. Do not create engineer-named subdirectories or feature-slug directories there.
 
-If a relevant issue does not already exist in your issue tracker, create one before writing specs. If your tracker exposes tooling such as an MCP server or CLI, use it to:
+If a relevant issue does not already exist in your issue tracker, create one before writing specs. If a team-specific `issue-tracking` skill is available, follow it for tracker discovery, team/project selection, labels, and creation rules. Otherwise, inspect `AGENTS.md`, repo-local companion skills, or repository docs for tracker conventions. If your tracker exposes tooling such as an MCP server or CLI, use it to:
 
 - find the appropriate team or project
 - inspect the expected labels/tags
 - create the issue with the appropriate team and labels
 
-If the correct team or labels are not obvious from the request and surrounding context, use `ask_user_question` to clarify rather than guessing.
+If the correct team or labels are not obvious from the request and surrounding context and a structured question tool is available, use it to clarify rather than guessing. Otherwise, ask concisely in chat before creating the issue.
 
 These specs should largely be written by agents, not by hand, and should be checked into source control so they can be reviewed and kept current with the code.
 

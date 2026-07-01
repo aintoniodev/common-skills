@@ -75,7 +75,7 @@ For each review thread with a response from the current user or agent:
 
 Treat a material difference between the implementation and the last acknowledged resolution as a `review-comment consistency` mismatch. Include the review comment URL, the acknowledged resolution text, the relevant implementation path and line when available, and why the implementation does or does not match what was promised.
 
-Use the same `ask_user_question` flow for these inconsistencies. For review-comment consistency mismatches, the resolution choices should be:
+Use the same structured question flow for these inconsistencies when available; otherwise ask in chat with the same options. For review-comment consistency mismatches, the resolution choices should be:
 
 - Change the implementation to match the last acknowledged resolution on the comment.
 - Append a follow-up comment explaining why the implementation is being left as-is.
@@ -83,7 +83,7 @@ Use the same `ask_user_question` flow for these inconsistencies. For review-comm
 - Acknowledge without changes.
 - `Other...`
 
-If the user chooses to append a follow-up comment, draft the comment for approval before posting it. Do not post GitHub comments without explicit approval. Prefix agent-authored follow-up comments with a clear agent attribution (for example, your agent's name) so reviewers can see the response was agent-authored. For the canonical attribution prefix your team uses, follow the shared `agent-attribution` skill (hosted in `warp-skills`) when one is available rather than hardcoding a specific identity here.
+If the user chooses to append a follow-up comment, draft the comment for approval before posting it. Do not post GitHub comments without explicit approval. Prefix agent-authored follow-up comments with a clear agent attribution (for example, your agent's name) so reviewers can see the response was agent-authored. For the canonical attribution prefix your team uses, follow your team's shared attribution skill (for example, `agent-attribution`) when one is available rather than hardcoding a specific identity here.
 
 ## Security spec validation
 
@@ -119,7 +119,7 @@ If the specs reference Figma mocks, design links, screenshots, or visual accepta
 
 Treat material visual differences as product mismatches, including missing UI states, incorrect copy, layout differences that affect usability, wrong component hierarchy, missing affordances, visual regressions, or behavior that contradicts the mock. Do not over-report tiny pixel differences unless the spec calls for exact visual fidelity or the difference affects the user experience.
 
-Call `ask_user_question` with options like:
+Ask with options like:
 
 - `Launch cloud computer-use agents to validate product behavior`
 - `Skip cloud computer-use validation`
@@ -172,15 +172,18 @@ If security-relevant mismatches exist, call them out separately and avoid downpl
 
 If no mismatches are found, say that the implementation appears to match the discovered specs, summarize the specs checked, and list any validation that was or was not run.
 
+## Structured questions
+
+When a structured question tool such as `ask_user_question` is available, use it for mismatch resolution mode, per-mismatch decisions, cloud validation choices, and commit/push prompts. Every structured question should include an `Other...` option for custom instructions. Outside environments with a structured question tool, ask the same questions in normal chat with the same options and wait for the user's answer before continuing.
+
 ## Initial resolution mode
 
-When mismatches exist, the first `ask_user_question` call must ask how the user wants to resolve them:
+When mismatches exist, the first resolution question must ask how the user wants to resolve them:
 
 - `Resolve one-by-one`
 - `Collect all decisions, then apply in a batch`
 - `Other...`
 
-Every `ask_user_question` call in this skill must include an `Other...` option for custom instructions.
 
 ### One-by-one mode
 
@@ -200,7 +203,7 @@ After all mismatch decisions are collected, apply all selected code and spec cha
 
 ## Per-mismatch questions
 
-For each mismatch, call `ask_user_question` with options tailored to the specific difference. Always include options with these meanings:
+For each mismatch, ask with options tailored to the specific difference. Always include options with these meanings:
 
 - Update the implementation to match the spec.
 - Update the spec to match the implementation.
@@ -253,7 +256,7 @@ If the user chooses to commit:
 2. Ask for or propose a concise commit message if one is not already clear.
 3. Stage only the intended files.
 4. Commit non-interactively.
-5. Include your agent's co-author attribution trailer in the commit message.
+5. Include your agent's co-author attribution trailer in the commit message. If a team-specific `agent-attribution` skill is available, follow it for the exact trailer.
 
 If the user chooses to push, push the current branch to `origin` after the commit succeeds. If commit or push fails, report the failure and do not retry destructively.
 

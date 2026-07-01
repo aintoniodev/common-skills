@@ -7,6 +7,11 @@ description: Diagnose CI failures for a PR using the GitHub CLI, extract error l
 
 Programmatically diagnose CI failures for a PR and generate a plan to fix them.
 
+## Related Skills
+
+- `fix-errors` - Resolve the build, lint, formatting, and test failures identified by the diagnosis.
+- `diagnose-ci-failures-local` - Optional per-repo companion that documents exact CI check names and local failure categories.
+
 ## Overview
 
 This skill provides a deterministic workflow to check CI status for a PR, extract failure logs, analyze errors, and create a plan (not code changes) to resolve issues. The output is always a plan document that can be reviewed before execution.

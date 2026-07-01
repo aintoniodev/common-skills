@@ -19,7 +19,7 @@ Write specs to `specs/<id>/TECH.md`, where `<id>` is one of:
 
 Match the id used by the sibling `PRODUCT.md` when one exists. `specs/` should contain only id-named directories as direct children.
 
-Ticket / issue references are optional. If the user has a tracker ticket or GitHub issue, use its id. If they don't, ask them for a feature name to use as the directory. Only create a new tracker ticket or GitHub issue when the user explicitly asks for one; in that case use your issue tracker's tooling (for example, an MCP server) or the `gh` CLI respectively (and `ask_user_question` if team, labels, or repo are unclear).
+Ticket / issue references are optional. If the user has a tracker ticket or GitHub issue, use its id. If they don't, ask them for a feature name to use as the directory. Only create a new tracker ticket or GitHub issue when the user explicitly asks for one; in that case prefer a team-specific `issue-tracking` skill when available, otherwise use tracker guidance from `AGENTS.md`, repo-local companion skills, or repository docs. Use your issue tracker's tooling (for example, an MCP server) or the `gh` CLI respectively, and ask the user if team, labels, or repo are unclear.
 
 ## When to use
 

@@ -30,11 +30,11 @@ Write specs to `specs/<id>/PRODUCT.md`, where `<id>` is one of:
 
 `specs/` should contain only id-named directories as direct children — no engineer-named subdirectories.
 
-Ticket / issue references are optional. If the user has a tracker ticket or GitHub issue, use its id. If they don't, ask them for a feature name to use as the directory. Only create a new tracker ticket or GitHub issue when the user explicitly asks for one; in that case use your issue tracker's tooling (for example, an MCP server) or the `gh` CLI respectively (and `ask_user_question` if team, labels, or repo are unclear).
+Ticket / issue references are optional. If the user has a tracker ticket or GitHub issue, use its id. If they don't, ask them for a feature name to use as the directory. Only create a new tracker ticket or GitHub issue when the user explicitly asks for one; in that case prefer a team-specific `issue-tracking` skill when available, otherwise use tracker guidance from `AGENTS.md`, repo-local companion skills, or repository docs. Use your issue tracker's tooling (for example, an MCP server) or the `gh` CLI respectively, and ask the user if team, labels, or repo are unclear.
 
 ## Before writing
 
-Gather only the context you need: directory id (issue tracker ticket, GitHub issue, or feature name), feature summary, target users, key behaviors, edge cases, and how the feature will be validated. Use `ask_user_question` for missing context rather than guessing.
+Gather only the context you need: directory id (issue tracker ticket, GitHub issue, or feature name), feature summary, target users, key behaviors, edge cases, and how the feature will be validated. Use a structured question tool when available for missing context; otherwise ask concisely in chat rather than guessing.
 
 ### Figma mocks
 
@@ -113,7 +113,7 @@ For large features, the implementer may optionally keep a `DECISIONS.md` file su
 
 ## Example Behavior section
 
-A sample Behavior section for a hypothetical feature: rendering GitHub-flavored Markdown tables in block-based output. It demonstrates the expected shape — numbered, testable, user-perspective invariants that enumerate defaults, edge cases, malformed input, streaming, selection/copy, search, sharing, theming, and cross-surface consistency, with one inline open question. (Optional aside: Warp renders Markdown tables richly in its block output — see https://x.com/warpdotdev/status/2053888801911767076 — though that is not required to use this skill.)
+A sample Behavior section for a hypothetical feature: rendering GitHub-flavored Markdown tables in block-based output. It demonstrates the expected shape — numbered, testable, user-perspective invariants that enumerate defaults, edge cases, malformed input, streaming, selection/copy, search, sharing, theming, and cross-surface consistency, with one inline open question.
 
 ````markdown
 ## Behavior
@@ -154,9 +154,9 @@ A sample Behavior section for a hypothetical feature: rendering GitHub-flavored 
 
 13. Search within a block (find-in-block) matches against cell text content. Matches highlight in place in the rendered cell; navigating matches scrolls the table into view, including horizontally if the match is in an off-screen column.
 
-14. Sharing or exporting a block (Warp Drive if installed, share link, save as file) preserves the original markdown source, not the rendered form.
+14. Sharing or exporting a block (Warp Drive, share link, save as file) preserves the original markdown source, not the rendered form.
 
-15. Theming: table borders, header backgrounds, alternating row shading (if any), and link/code styles all come from the active theme (for example, the active Warp theme, if installed). No hard-coded colors.
+15. Theming: table borders, header backgrounds, alternating row shading (if any), and link/code styles all come from the active Warp theme. No hard-coded colors.
 
 16. Markdown tables render consistently wherever block-list markdown already renders — command output, agent responses, and any other block type that supports inline markdown. The same input produces the same table in each surface.
 

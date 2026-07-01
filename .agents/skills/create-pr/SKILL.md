@@ -19,6 +19,7 @@ This guide covers best practices for creating pull requests, including merging t
 ### 1. Merge the base branch into your feature branch
 
 **Always merge the latest base branch into your feature branch before starting the review process.**
+If the base branch is not already known, determine it before merging. Prefer the current PR's base from `gh pr view`, then the remote default branch from `git symbolic-ref --short refs/remotes/origin/HEAD`, then a documented repository convention.
 
 ```bash
 git fetch origin
@@ -64,7 +65,7 @@ This helps you:
 
 ### 4. Link to a tracker task
 
-When possible, PRs should be associated with an issue tracker task. Use your tracker's tooling (for example, an MCP server or CLI) to find the corresponding issue.
+When possible, PRs should be associated with an issue tracker task. If a team-specific `issue-tracking` skill is available, use it to find the corresponding issue and linking convention. Otherwise, look for tracker guidance in `AGENTS.md`, a repo-specific `create-pr-local` companion, or repository docs. If the tracker, team, labels, or issue are still unclear and a structured question tool is available, ask the user; outside environments with such a tool, ask concisely in chat.
 
 **Branch naming convention:**
 Remote branches should be prefixed with your name (e.g., `zheng/feature`, `alice/fix-bug`).
@@ -146,7 +147,7 @@ Follow the repository's local testing conventions for guidance on writing unit t
 
 ### Cover user-visible flows and critical paths
 
-If the PR changes a user-visible flow, fixes an end-to-end regression, or covers a critical (P0) use case—any behavior that would warrant an urgent fix if broken—add or update the appropriate integration or end-to-end coverage following the repository's conventions. If you are unsure whether coverage is warranted, use the `ask_user_question` tool to confirm before creating or updating the PR.
+If the PR changes a user-visible flow, fixes an end-to-end regression, or covers a critical (P0) use case—any behavior that would warrant an urgent fix if broken—add or update the appropriate integration or end-to-end coverage following the repository's conventions. If you are unsure whether coverage is warranted and a structured question tool is available, use it to confirm before creating or updating the PR; otherwise, ask the user concisely in chat before adding broad coverage.
 
 A repo may document its integration-test framework and P0 expectations in a `create-pr-local` companion.
 
