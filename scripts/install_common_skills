@@ -713,9 +713,9 @@ const quiet = process.argv[6] === "1";
 const globalStampFile = process.argv[7];
 const labelTitle = process.argv[8];
 const lockFileName = process.argv[9];
-// When best-effort (e.g. the warp-skills set), skip cross-target dedupe so a
-// same-named skill installed by another set (e.g. common-skills) does not trip
-// the project-vs-global exclusivity checks.
+// Best-effort sets install a distinct lock into an explicit target, so skip the
+// within-set project-vs-global exclusivity check; an incidental name collision
+// across sets must not block the install.
 const strict = process.argv[10] !== "1";
 
 function fail(messages) {
