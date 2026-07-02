@@ -27,7 +27,7 @@ Each installed skill lives in its own directory under `.agents/skills/`. The onl
 - `name`: the kebab-case skill identifier
 - `description`: what the skill does and when agents should use it
 
-Companion skills that extend a core also declare:
+Companion skills that extend a core also declare these in their `SKILL.md` YAML frontmatter:
 
 - `specializes: <core-skill-name>`
 - `specializes_source: <owner/repo>:<path>`
@@ -69,6 +69,13 @@ Companion skills that extend a core also declare:
 - `update-skill` — creates and maintains skill directories and `SKILL.md` files.
 
 ## Extension model
+
+There are two kinds of companion, each with its own naming convention:
+
+- **Repo-specific modifiers** use the `<core>-local` suffix (for example `create-pr-local`, `fix-errors-local`, `diagnose-ci-failures-local`) and specialize a core for a single repository.
+- **Team-specific modifiers** are named to match the exact reference a core makes (for example `agent-attribution`, `issue-tracking`, `branding`) and are shared across a team's repos.
+
+These are the supported companion conventions today. A core is not replaced by a same-name skill: a companion either specializes a core or is referenced by it, rather than overriding it.
 
 ### Repo-specific companions (`*-local`)
 
