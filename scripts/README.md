@@ -119,7 +119,7 @@ The downstream lockfile update workflow uses this command before opening lockfil
 ## Downstream lockfile workflow
 `.github/workflows/update-downstream-skill-locks.yml` runs after every push to `main`. A single parametrized matrixed job refreshes both `skills-lock.json` (from `warpdotdev/common-skills`) and `warp-skills-lock.json` (from `warpdotdev/warp-skills`) in `warpdotdev/warp` and `warpdotdev/warp-server`, opening a lockfile-only pull request for each lock that changes.
 Each pull request requests the author of the originating common-skills pull request when possible and enables squash auto-merge. Direct pushes and authors who cannot review a target repository do not prevent pull request creation.
-The workflow requires a dedicated GitHub App installed on both downstream repositories with contents and pull-request write access. Configure its App ID as the `SKILLS_SYNC_APP_ID` Actions variable and its private key as the `SKILLS_SYNC_APP_PRIVATE_KEY` Actions secret in `common-skills`.
+The workflow requires a dedicated GitHub App installed on both downstream repositories with contents and pull-request write access. Configure its App ID as the `COMMON_SKILLS_SYNC_APP_ID` Actions variable and its private key as the `COMMON_SKILLS_SYNC_APP_PRIVATE_KEY` Actions secret in `common-skills`.
 ## Remove script
 `remove_common_skills` removes common agent skills listed in `skills-lock.json`.
 The script supports:
