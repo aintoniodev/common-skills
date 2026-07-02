@@ -31,14 +31,6 @@ case "${target}" in
   *) target="project" ;;
 esac
 
-# --skip-warp-skills is handled above; drop it before forwarding.
-forwarded=()
-for arg in "$@"; do
-  case "${arg}" in
-    --skip-warp-skills) ;;
-    *) forwarded+=("${arg}") ;;
-  esac
-done
 
 exec "${SCRIPT_DIR}/install_common_skills" \
   --source warpdotdev/warp-skills \
@@ -46,4 +38,4 @@ exec "${SCRIPT_DIR}/install_common_skills" \
   --label warp \
   --best-effort \
   "--${target}" \
-  "${forwarded[@]}"
+  "$@"

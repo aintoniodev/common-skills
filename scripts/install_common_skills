@@ -195,7 +195,7 @@ Options:
   --source <owner/repo>  Skills source repository (default: warpdotdev/common-skills).
   --lock-file <name>   Lockfile name within the repo (default: skills-lock.json).
   --label <name>       Label used for stamp and messages (default: common).
-  --best-effort        On any failure or missing lock, print a notice and exit 0.
+  --best-effort        On any failure or missing lock, print a notice and exit 0 (keeps an optional set like warp-skills from blocking the caller).
   -h, --help           Show this help message.
 
 Environment:
@@ -549,6 +549,8 @@ install_lock_into_dir() {
     npx --yes "skills@${SKILLS_CLI_VERSION}" experimental_install
   ) < /dev/null; then
     rm -rf "${temp_dir}"
+    # Best-effort: a failed install (e.g. no repo access) is non-fatal — emit a
+    # notice and exit 0 so the caller (bootstrap/run) continues.
     if [[ "${BEST_EFFORT}" -eq 1 ]]; then
       echo "${LABEL}-skills not installed (no access) — skipping."
       exit 0
@@ -700,7 +702,7 @@ verify_common_skills() {
     exit 1
   fi
 
-  node - "${LOCK_FILE}" "${REPO_ROOT}" "${HOME}" "${TARGET}" "${QUIET}" "$(global_stamp_file)" "${LABEL_TITLE}" "${LOCK_FILE_NAME}" "${BEST_EFFORT}" <<'NODE'
+  node - "${LOCK_FILE}" "${REPO_ROOT}" "${HOME}" "${TARGET}" "${QUIET}" "$(global_stamp_file)" "${LABEL_TITLE}" "${LOCK_FILE_NAME}" <<'NODE'
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
@@ -713,10 +715,6 @@ const quiet = process.argv[6] === "1";
 const globalStampFile = process.argv[7];
 const labelTitle = process.argv[8];
 const lockFileName = process.argv[9];
-// Best-effort sets install a distinct lock into an explicit target, so skip the
-// within-set project-vs-global exclusivity check; an incidental name collision
-// across sets must not block the install.
-const strict = process.argv[10] !== "1";
 
 function fail(messages) {
   for (const message of messages) {
@@ -843,14 +841,14 @@ const skills = lockedSkills();
 const projectPresent = containsLockedSkill(skills, "project");
 const globalPresent = fs.existsSync(globalStampFile) || containsLockedSkill(skills, "global");
 
-if (strict && projectPresent && globalPresent) {
+if (projectPresent && globalPresent) {
   fail([
     "error: common agent skills are installed in both this checkout's .agents/skills and ~/.agents/skills.",
     `Remove one copy with scripts/remove_common_skills --repo-root ${repoRoot} or scripts/remove_common_skills --repo-root ${repoRoot} --global, then rerun.`,
   ]);
 }
 
-if (strict && !projectPresent && !globalPresent) {
+if (!projectPresent && !globalPresent) {
   fail([
     "error: common agent skills are not installed in this checkout's .agents/skills or ~/.agents/skills.",
     `Install them with scripts/install_common_skills --repo-root ${repoRoot}, then rerun.`,
@@ -1020,23 +1018,17 @@ if [[ "${FORCE}" -ne 1 && "${IF_NEEDED}" -eq 1 && -z "${TARGET}" ]] && common_sk
   log "${LABEL_TITLE} skills are already up to date."
   exit 0
 fi
-if [[ "${BEST_EFFORT}" -eq 1 && -n "${TARGET}" ]]; then
-  # Best-effort installs (e.g. warp-skills) honor the explicit target and skip
-  # the cross-target dedupe, which is scoped to a single skill set.
-  if ! RESOLVED_TARGET="$(normalize_common_skills_target "${TARGET}")"; then
-    echo "error: invalid install target: ${TARGET} (expected project or global)" >&2
-    exit 1
-  fi
-else
-  fail_if_target_requires_unavailable_prompt
-  if ! RESOLVED_TARGET="$(resolve_common_skills_target)"; then
-    echo "error: could not resolve common skills install target" >&2
-    usage >&2
-    exit 1
-  fi
+fail_if_target_requires_unavailable_prompt
+if ! RESOLVED_TARGET="$(resolve_common_skills_target)"; then
+  echo "error: could not resolve common skills install target" >&2
+  usage >&2
+  exit 1
 fi
 TARGET="${RESOLVED_TARGET}"
 if [[ ! -f "${LOCK_FILE}" ]]; then
+  # A committed lock is how a consumer opts into a set. For best-effort sets
+  # (warp-skills), a missing lock means "not adopted", so skip rather than
+  # create one — creating needs source access and would add an unreviewed lock.
   if [[ "${BEST_EFFORT}" -eq 1 ]]; then
     log "${LABEL}-skills not installed (no ${LOCK_FILE_NAME} present) — skipping."
     exit 0

@@ -106,6 +106,8 @@ jobs:
       - name: Update target lockfile
         id: update
         run: |
+          # A consumer that has not adopted this lock (e.g. no warp-skills-lock.json)
+          # has nothing to refresh, so skip cleanly instead of failing the job.
           if [[ ! -f "target/${{ matrix.lock_file }}" ]]; then
             echo "::notice::target/${{ matrix.lock_file }} is absent in ${{ matrix.repository }}; nothing to refresh."
             echo "changed=false" >> "${GITHUB_OUTPUT}"
@@ -115,6 +117,8 @@ jobs:
             --repo-root target \
             --source "${{ matrix.source }}" \
             --lock-file "${{ matrix.lock_file }}"
+          # Detect whether regenerating the lock changed it vs the committed file;
+          # only a real change warrants opening a downstream PR.
           if git -C target diff --quiet -- "${{ matrix.lock_file }}"; then
             echo "changed=false" >> "${GITHUB_OUTPUT}"
           else

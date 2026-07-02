@@ -105,7 +105,7 @@ Consumers invoke it through the same resolver as common skills:
 ```sh
 ./script/resolve_common_skills install_warp_skills -- --repo-root "${REPO_ROOT}" --if-needed
 ```
-`--best-effort` installs a distinct skill set into an explicit target, so it does not apply the project-vs-global exclusivity check (a guard that keeps a *single* set from being installed in both places). This lets warp-skills install to the project while common skills live globally. warp-skills should avoid reusing common-skill names; the bypass ensures an incidental name collision does not block the install.
+warp-skills must not reuse common-skill names. The project-vs-global exclusivity check applies to every set: if a locked skill is found in both `.agents/skills` and `~/.agents/skills`, the install fails instead of silently placing the same name in two locations. Since warp-skills and common skills use distinct names, this check also surfaces any accidental naming collision between the two sets.
 ## Update lock script
 `update_common_skills_lock` non-interactively regenerates an existing skills lockfile from the default branch of a skills source repo without installing skills into the target repository. By default it regenerates `skills-lock.json` from `warpdotdev/common-skills`; pass `--source <owner/repo>` and `--lock-file <name>` to regenerate another lock (e.g. `--source warpdotdev/warp-skills --lock-file warp-skills-lock.json`).
 It generates a candidate in a temporary Git repository, then copies back only a changed `skills-lock.json`. Generator failures and missing candidate output fail the command instead of retaining the existing lock.
