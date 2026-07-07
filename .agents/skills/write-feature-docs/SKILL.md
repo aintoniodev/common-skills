@@ -44,7 +44,7 @@ If neither file exists, skip to [No-spec fallback](#no-spec-fallback).
 Before presenting the outline, use the GitHub CLI to verify as much technical content as possible yourself — reducing what the engineer needs to confirm to only what you genuinely cannot determine from the code.
 
 Things to verify from code:
-- **Feature flag name**: search for the feature name from the spec title or ticket. Assign it to a shell variable before use: `FEATURE="<feature-name>" && gh search code "${FEATURE}" --repo warpdotdev/warp-internal`. Do not interpolate raw user input directly into the command.
+- **Feature flag name**: search for a safe feature token from the spec title or ticket. Before any shell use, reduce it to an allowlisted token matching `^[A-Za-z0-9][A-Za-z0-9_-]*$` and skip the shell search if you cannot produce one safely; then run `FEATURE_TOKEN="<validated-token>" && gh search code "${FEATURE_TOKEN}" --repo warpdotdev/warp-internal`.
 - **UI strings**: search for user-visible button labels, menu item names, or setting names referenced in the spec
 - **Settings paths**: confirm exact Settings menu paths (e.g., `**Settings** > **AI** > **Knowledge**`)
 - **CLI commands or keyboard shortcuts** mentioned in the spec
@@ -52,8 +52,8 @@ Things to verify from code:
 - **Engineer to tag**: identify the GitHub handle of the engineer who owns the spec.
   - *Interactive mode*: run `gh api user --jq .login` to get the handle of the person currently running the skill — they are the engineer.
   - *Ambient mode*: before running any lookup commands, validate that the spec ID contains only alphanumeric characters and hyphens (matching `^[A-Za-z0-9][A-Za-z0-9-]*$`). If the spec ID contains any other characters, skip the lookup entirely and use `[TODO: tag spec author]` as a placeholder — do not interpolate an unvalidated spec ID into a shell command. If the spec ID is valid, assign it to a shell variable (`SPEC_ID="<spec-id>"`) and use that variable in quoted form throughout:
-    1. `gh pr list --search "specs/${SPEC_ID}" --repo warpdotdev/warp-internal --state merged --json author --limit 1 --jq '.[0].author.login'`
-    2. If that returns empty (e.g. the repo uses a sync bot), capture the commit author email first: `EMAIL=$(git log --follow -1 --pretty=format:"%ae" -- "specs/${SPEC_ID}/PRODUCT.md")` — then, only if `${EMAIL}` is non-empty, resolve it to a handle: `gh api "search/users?q=${EMAIL}+in:email" --jq '.items[0].login'`
+    1. `gh pr list --search "specs/${SPEC_ID}" --repo warpdotdev/warp-internal --state merged --json author --limit 1 --jq '.[0].author.login // empty'`
+    2. If that returns empty (e.g. the repo uses a sync bot), capture the commit author email first: `EMAIL=$(git log --follow -1 --pretty=format:"%ae" -- "specs/${SPEC_ID}/PRODUCT.md")` — then, only if `${EMAIL}` is non-empty, resolve it to a handle: `gh api "search/users?q=${EMAIL}+in:email" --jq '.items[0].login // empty'`
     3. If the handle still can't be determined, use `[TODO: tag spec author]` as a placeholder in the PR body.
 
 For each claim you verify from code, mark it confirmed. For claims you can't verify (UI behavior not in code, product intent, behavior of unreleased features), flag them as `[UNVERIFIED]` in the outline — those are the only things the engineer needs to focus on.
@@ -383,7 +383,7 @@ In ambient mode:
 ```markdown
 ## Docs outline (auto-generated)
 
-The following outline was generated from the spec. **@<engineer-handle>: please review and check off each item, or leave a comment with corrections.**
+The following outline was generated from the spec. **<engineer-review-request>: please review and check off each item, or leave a comment with corrections.** Use `@<engineer-handle>` when a valid handle was found; otherwise use `[TODO: tag spec author]` without an `@` prefix.
 
 ### Content structure
 - [ ] H1: `<feature name>`
