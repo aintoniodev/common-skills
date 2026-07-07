@@ -53,7 +53,7 @@ Things to verify from code:
   - *Interactive mode*: run `gh api user --jq .login` to get the handle of the person currently running the skill — they are the engineer.
   - *Ambient mode*: before running any lookup commands, validate that the spec ID contains only alphanumeric characters and hyphens (matching `^[A-Za-z0-9][A-Za-z0-9-]*$`). If the spec ID contains any other characters, skip the lookup entirely and use `[TODO: tag spec author]` as a placeholder — do not interpolate an unvalidated spec ID into a shell command. If the spec ID is valid, assign it to a shell variable (`SPEC_ID="<spec-id>"`) and use that variable in quoted form throughout:
     1. `gh pr list --search "specs/${SPEC_ID}" --repo warpdotdev/warp-internal --state merged --json author --limit 1 --jq '.[0].author.login'`
-    2. If that returns empty (e.g. the repo uses a sync bot), use: `git log --follow -1 --pretty=format:"%ae" -- "specs/${SPEC_ID}/PRODUCT.md"` then resolve the email via `gh api "search/users?q=${EMAIL}+in:email" --jq '.items[0].login'`
+    2. If that returns empty (e.g. the repo uses a sync bot), capture the commit author email first: `EMAIL=$(git log --follow -1 --pretty=format:"%ae" -- "specs/${SPEC_ID}/PRODUCT.md")` — then, only if `${EMAIL}` is non-empty, resolve it to a handle: `gh api "search/users?q=${EMAIL}+in:email" --jq '.items[0].login'`
     3. If the handle still can't be determined, use `[TODO: tag spec author]` as a placeholder in the PR body.
 
 For each claim you verify from code, mark it confirmed. For claims you can't verify (UI behavior not in code, product intent, behavior of unreleased features), flag them as `[UNVERIFIED]` in the outline — those are the only things the engineer needs to focus on.
@@ -348,7 +348,10 @@ After generating the draft, submit it to `warpdotdev/docs` automatically:
    - The feature name and spec ID
    - A link to the original spec PR
    - A list of all `[UNVERIFIED]` and `[TODO]` items in the draft for reviewer attention
-6. In the PR body, include `/cc @<engineer-handle>` (from Step 2) to notify the spec author. Request review from `@rachaelrenk` and `@hongyi-chen`.
+6. In the PR body, notify the spec author using the handle from Step 2:
+   - If a valid GitHub handle was found: include `/cc @<engineer-handle>`
+   - If the fallback placeholder was produced: include the literal text `[TODO: tag spec author]` — do not wrap it in `/cc @`, as that would produce a malformed mention
+   Request review from `@rachaelrenk` and `@hongyi-chen`.
 
 ---
 
