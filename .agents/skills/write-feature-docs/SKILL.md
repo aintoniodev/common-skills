@@ -50,6 +50,9 @@ Things to verify from code:
 - **Settings paths**: confirm exact Settings menu paths (e.g., `**Settings** > **AI** > **Knowledge**`)
 - **CLI commands or keyboard shortcuts** mentioned in the spec
 - **Related features**: identify other features that cross-reference this one for "Related pages"
+- **Engineer to tag**: identify the GitHub handle of the engineer who owns the spec.
+  - *Interactive mode*: run `gh api user --jq .login` to get the handle of the person currently running the skill — they are the engineer.
+  - *Ambient mode*: try `gh pr list --search "specs/<spec-id>" --repo warpdotdev/warp-internal --state merged --json author --limit 1 --jq '.[0].author.login'` to find the PR author. If that returns empty (e.g. the repo uses a sync bot), try `git log --follow -1 --pretty=format:"%ae" specs/<spec-id>/PRODUCT.md` and resolve the email to a GitHub handle via `gh api "search/users?q=<email>+in:email" --jq '.items[0].login'`. If the handle still can't be determined, use `[TODO: tag spec author]` as a placeholder in the PR body.
 
 For each claim you verify from code, mark it confirmed. For claims you can't verify (UI behavior not in code, product intent, behavior of unreleased features), flag them as `[UNVERIFIED]` in the outline — those are the only things the engineer needs to focus on.
 
@@ -335,7 +338,7 @@ After generating the draft, submit it to `warpdotdev/docs` automatically:
    - The feature name and spec ID
    - A link to the original spec PR
    - A list of all `[UNVERIFIED]` and `[TODO]` items in the draft for reviewer attention
-6. Request review from `@rachaelrenk`, `@petradonka`, and `@hongyi-chen`
+6. In the PR body, include `/cc @<engineer-handle>` (from Step 2) to notify the spec author. Request review from `@rachaelrenk` and `@hongyi-chen`.
 
 ---
 
