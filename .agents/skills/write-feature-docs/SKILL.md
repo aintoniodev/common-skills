@@ -410,4 +410,6 @@ The following outline was generated from the spec. **@<engineer-handle>: please 
 
 ## Related skills
 
+- `write-product-spec` — produces the `PRODUCT.md` this skill reads
+- `write-tech-spec` — produces the `TECH.md` this skill reads
 - `scan-new-specs` — the scheduled agent that invokes this skill in ambient mode
