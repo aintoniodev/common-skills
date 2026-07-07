@@ -13,18 +13,17 @@ The engineer's job is to confirm what you couldn't verify from the spec and code
 
 1. Find and read the spec files
 2. Research the codebase to verify technical claims — minimize what the engineer needs to check
-3. Generate a concise outline, distinguishing verified facts from open questions
-4. Engineer confirms or corrects
-5. Generate the complete MDX draft
-6. Attempt screenshot capture via computer use (if available)
-7. Open a draft PR in `warpdotdev/docs` and tag the docs team
+3. Generate a concise outline and wait for engineer confirmation
+4. Generate the complete MDX draft
+4.5. Attempt screenshot capture via computer use (if available)
+5. Open a draft PR in `warpdotdev/docs` and tag the docs team
 
 ---
 
 ## Step 1: Find and read the spec
 
 Ask the engineer for the spec ID if they haven't provided it. The spec ID is one of:
-- A Linear ticket number: `APP-1234`
+- A Linear ticket number: `APP-1234`, `REMOTE-1234`, `QUALITY-408`
 - A GitHub issue (prefixed with `gh-`): `gh-4567`
 - A short kebab-case feature name: `vertical-tabs-hover-sidecar`
 
@@ -34,7 +33,7 @@ Look for the spec files at:
 
 Read both files if both exist. `PRODUCT.md` is the primary driver for the docs content.
 
-**When reading `TECH.md`:** Before incorporating anything from it, identify content that looks like internal implementation detail — database schema, internal service names, private API endpoints, confidential server architecture. Present these flagged items to the engineer and ask them to confirm what's safe to include in public docs and what should stay internal. Do not include anything marked confidential in the draft.
+**When reading `TECH.md`:** *(Interactive mode only — in ambient mode, treat all TECH.md-derived content as internal without review; see [Ambient mode](#ambient-mode-called-by-scan-new-specs).)* Before incorporating anything from it, identify content that looks like internal implementation detail — database schema, internal service names, private API endpoints, confidential server architecture. Present these flagged items to the engineer and ask them to confirm what's safe to include in public docs and what should stay internal. Do not include anything marked confidential in the draft.
 
 If neither file exists, skip to [No-spec fallback](#no-spec-fallback).
 
@@ -45,7 +44,7 @@ If neither file exists, skip to [No-spec fallback](#no-spec-fallback).
 Before presenting the outline, use the GitHub CLI to verify as much technical content as possible yourself — reducing what the engineer needs to confirm to only what you genuinely cannot determine from the code.
 
 Things to verify from code:
-- **Feature flag name**: `gh search code "<feature-name>" --repo warpdotdev/warp-internal`
+- **Feature flag name**: search for the feature name from the spec title or ticket. Assign it to a shell variable before use: `FEATURE="<feature-name>" && gh search code "${FEATURE}" --repo warpdotdev/warp-internal`. Do not interpolate raw user input directly into the command.
 - **UI strings**: search for user-visible button labels, menu item names, or setting names referenced in the spec
 - **Settings paths**: confirm exact Settings menu paths (e.g., `**Settings** > **AI** > **Knowledge**`)
 - **CLI commands or keyboard shortcuts** mentioned in the spec
@@ -88,7 +87,11 @@ CONTENT SECTIONS
         3. [Step description]
         ...
   ## Related pages — [cross-links to suggest]
+```
 
+> The sections above are defaults. Adapt the outline to the feature: omit `## How it works` if the feature needs no conceptual explanation, add multiple usage sections if the feature has distinct workflows, and collapse `## Key features` into the opening paragraph if the feature is simple enough.
+
+```
 VERIFIED FROM CODEBASE ✅
   - [e.g., "Feature flag: `my_feature_flag` confirmed in warp-internal"]
   - [e.g., "Settings path: confirmed as Settings > AI > Agents > Permissions"]
@@ -196,7 +199,7 @@ These conventions come from the Warp docs style guide and must be followed:
 - `:::note` — supplemental context, tips
 - `:::caution` — caveats, limitations
 - `:::danger` — destructive or irreversible actions
-- `:::tip` — confirmation of expected outcomes
+- `:::tip` — helpful hints and best practices
 
 **What to leave as `[TODO: docs reviewer — ...]` placeholders**
 - Screenshots where computer use fails the quality gate, is unavailable, or the feature isn't yet shipped
@@ -302,7 +305,7 @@ Do **not** add a screenshot for every step in a procedure. Only add one where th
 ```mdx
 <figure>
   <img
-    src="../../../assets/<section>/<feature-name>-<ui-state>.png"
+    src="[relative path from this MDX file to src/assets/<section>/<feature-name>-<ui-state>.png — count the directory depth of the MDX file and use that many ../ levels; e.g. 3 levels deep → ../../../assets/<section>/...]"
     alt="[Descriptive alt text: what the image shows, not just 'screenshot']"
   />
   <figcaption>[Caption: complete sentence, ≤10 words, orient don’t instruct, no marketing language, sentence case, ends with period.]</figcaption>
@@ -335,7 +338,11 @@ After generating the draft, submit it to `warpdotdev/docs` automatically:
 
 1. Clone `warpdotdev/docs` to a temp directory (or use the local clone if available)
 2. Write the MDX file to `src/content/docs/<proposed-section>/<filename>.mdx`
-3. Add a placeholder entry to `src/sidebar.ts` under the appropriate section (mark it `[TODO: docs reviewer — confirm placement]`)
+3. Add a placeholder entry to `src/sidebar.ts` under the appropriate section. Example:
+   ```ts
+   // [TODO: docs reviewer — confirm placement]
+   { label: '<Feature name>', link: '/<section>/<feature-name>/' },
+   ```
 4. Commit and push on a new branch named `docs/<spec-id>-feature-draft`
 5. Open a **draft PR** in `warpdotdev/docs` with a description that includes:
    - The feature name and spec ID
@@ -352,7 +359,7 @@ If `specs/<id>/PRODUCT.md` and `specs/<id>/TECH.md` don't exist, research the co
 **Research steps:**
 1. Search `warpdotdev/warp-internal` (or `warp-server` depending on context) for the feature name and related terms: `gh search code "<feature-name>" --repo warpdotdev/warp-internal`
 2. Read the most relevant source files to understand what the feature does
-3. Check for spec files under a different ID: `gh api repos/warpdotdev/warp-internal/git/trees/HEAD?recursive=1 | grep -i spec`
+3. Check for spec files under a different ID: `gh api repos/warpdotdev/warp-internal/contents/specs`
 4. Review recent merged PRs related to the feature: `gh pr list --search "<feature-name>" --state merged --repo warpdotdev/warp-internal --limit 10`
 
 **After research,** build as complete a picture as possible, then use `ask_user_question` only for specific gaps you couldn't fill from the code — not as a broad interview. Frame the questions concretely: "I found the feature in `app/src/ai/`. Based on the code, here's what I understand: [summary]. I couldn't determine these two things: [specific questions]."
@@ -373,7 +380,7 @@ In ambient mode:
 ```markdown
 ## Docs outline (auto-generated)
 
-The following outline was generated from the spec. **@<github-username>: please review and check off each item, or leave a comment with corrections.**
+The following outline was generated from the spec. **@<engineer-handle>: please review and check off each item, or leave a comment with corrections.**
 
 ### Content structure
 - [ ] H1: `<feature name>`
@@ -393,13 +400,11 @@ The following outline was generated from the spec. **@<github-username>: please 
 
 3. Generate the full MDX draft (Step 4) with this constraint: **do not draft any content derived from `TECH.md` in ambient mode.** There is no engineer present to confirm what is confidential, so any detail that came exclusively from `TECH.md` (implementation internals, data model, server architecture, private API details) must be replaced with `[TODO: engineer to verify — pulled from TECH.md, confirm this is safe to publish]`. Only `PRODUCT.md` content and codebase-verified facts are safe to draft without confirmation.
 4. **Attempt screenshots** (Step 4.5) — if computer use is available, run the predict-then-verify capture protocol for any screenshot placeholders. Include any screenshots that pass the quality gate in the draft.
-5. Open the draft PR (Step 5) as normal — tag the spec author and docs reviewers
+5. Open the draft PR (Step 5) as normal — substitute the engineer handle found in Step 2 for `<engineer-handle>` in the outline checklist before embedding it in the PR description
 6. Do not post any interactive messages to the terminal; all output should go into the PR
 
 ---
 
 ## Related skills
 
-- `write-product-spec` — produces the `PRODUCT.md` this skill reads
-- `write-tech-spec` — produces the `TECH.md` this skill reads
 - `scan-new-specs` — the scheduled agent that invokes this skill in ambient mode
