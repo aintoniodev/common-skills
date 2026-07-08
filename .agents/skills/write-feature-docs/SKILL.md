@@ -344,10 +344,20 @@ After generating the draft, submit it to `warpdotdev/docs` automatically:
    { label: '<Feature name>', link: '/<section>/<feature-name>/' },
    ```
 4. Commit and push on a new branch named `docs/<spec-id>-feature-draft`
-5. Open a **draft PR** in `warpdotdev/docs` with a description that includes:
+5. **Write the PR body using the `create_file` tool**, then open a **draft PR** in `warpdotdev/docs` with `--body-file`. The PR description must include:
    - The feature name and spec ID
    - A link to the original spec PR
    - A list of all `[UNVERIFIED]` and `[TODO]` items in the draft for reviewer attention
+
+   Use `create_file` to write the body to `/tmp/pr-body.md`, then pass it to `gh`:
+   ```bash
+   gh pr create --draft --body-file /tmp/pr-body.md ...
+   ```
+
+   **Never write the PR body via a shell command** (heredoc, `echo`, `printf`, or `--body "..."`). Shell tools process backticks, `[x]` glob patterns, and `$vars` inside the string before writing — corrupting markdown content. The `create_file` tool writes bytes directly to disk without any shell interpretation, making it the only safe method for PR bodies that contain markdown with backticks or `[ ]` / `[x]` checkbox syntax.
+
+   **In the "Docs outline" section of the PR body, use plain bullet points** (`-`) for agent-verified items, not `- [x]` checkboxes. Reserve `- [ ]` checkboxes only for the "Items needing review" section so reviewers know exactly which items require their action.
+
 6. In the PR body, notify the spec author using the handle from Step 2:
    - If a valid GitHub handle was found: include `/cc @<engineer-handle>`
    - If the fallback placeholder was produced: include the literal text `[TODO: tag spec author]` — do not wrap it in `/cc @`, as that would produce a malformed mention

@@ -130,7 +130,7 @@ For each uncovered spec, read `specs/<id>/PRODUCT.md` and assess whether it has 
 
 1. Run `write-feature-docs` in **ambient mode** (see `write-feature-docs` skill for details) — this skips the interactive outline confirmation and instead embeds the outline as a checklist in the PR description
 2. The PR is opened in `warpdotdev/docs` with the draft and a checklist of items needing engineer verification
-3. Request review from the engineer (`@<github-username>`) and from `@rachaelrenk`, `@petradonka`, and `@hongyi-chen`
+3. Request review from the engineer (`@<github-username>`) and from `@rachaelrenk` and `@hongyi-chen`
 4. Post this Slack message to `SLACK_CHANNEL`:
 
 ```
