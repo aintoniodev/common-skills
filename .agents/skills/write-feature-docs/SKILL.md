@@ -50,11 +50,35 @@ Things to verify from code:
 - **CLI commands or keyboard shortcuts** mentioned in the spec
 - **Related features**: identify other features that cross-reference this one for "Related pages"
 - **Engineer to tag**: identify the GitHub handle of the engineer who owns the spec.
-  - *Interactive mode*: run `gh api user --jq .login` to get the handle of the person currently running the skill — they are the engineer.
-  - *Ambient mode*: before running any lookup commands, validate that the spec ID contains only alphanumeric characters and hyphens (matching `^[A-Za-z0-9][A-Za-z0-9-]*$`). If the spec ID contains any other characters, skip the lookup entirely and use `[TODO: tag spec author]` as a placeholder — do not interpolate an unvalidated spec ID into a shell command. If the spec ID is valid, assign it to a shell variable (`SPEC_ID="<spec-id>"`) and use that variable in quoted form throughout:
-    1. `gh pr list --search "specs/${SPEC_ID}" --repo warpdotdev/warp-internal --state merged --json author --limit 1 --jq '.[0].author.login // empty'`
-    2. If that returns empty (e.g. the repo uses a sync bot), capture the commit author email first: `EMAIL=$(git log --follow -1 --pretty=format:"%ae" -- "specs/${SPEC_ID}/PRODUCT.md")` — then, only if `${EMAIL}` is non-empty, resolve it to a handle: `gh api "search/users?q=${EMAIL}+in:email" --jq '.items[0].login // empty'`
-    3. If the handle still can't be determined, use `[TODO: tag spec author]` as a placeholder in the PR body.
+  - *Interactive mode*: run `gh api user --jq .login` to get the handle of the person currently running the skill — use this only when the skill is being invoked directly by the spec engineer. If a docs team member or non-author is running the skill, use the discovery steps below instead.
+  - *Ambient mode and non-author interactive runs*: before running any lookup commands, validate that the spec ID contains only alphanumeric characters and hyphens (matching `^[A-Za-z0-9][A-Za-z0-9-]*$`). If the spec ID contains any other characters, skip the lookup entirely and use `[TODO: tag spec author]` as a placeholder. If the spec ID is valid, assign it to `SPEC_ID` and work through these steps in order, stopping as soon as a handle is found:
+    1. **Check `Co-authored-by:` trailers in the commit message** — in repos that mirror from a private source (like `warp-internal`), the sync bot is the commit author but the real author appears in a `Co-authored-by:` trailer. Extract the first non-bot entry:
+       ```bash
+       git log --follow -1 --format="%B" -- "specs/${SPEC_ID}/PRODUCT.md" \
+         | grep -i "^Co-authored-by:" \
+         | grep -v "\[bot\]" \
+         | head -1 \
+         | grep -oP '<[^>]+>' | tr -d '<>'
+       ```
+       This returns an email (possibly a GitHub noreply address). If the email matches the pattern `<userid>+<username>@users.noreply.github.com`, extract the handle directly: `echo "$EMAIL" | grep -oP '\+\K[^@]+'`. If it's a real email, resolve it via `gh api "search/users?q=${EMAIL}+in:email" --jq '.items[0].login'`.
+    2. **Parse the synced-from PR URL** — some sync bots embed the original PR URL in the commit body (e.g. `Synced from warp: https://github.com/warpdotdev/warp/pull/11901`). Extract it and fetch the PR author:
+       ```bash
+       ORIG_PR=$(git log --follow -1 --format="%B" -- "specs/${SPEC_ID}/PRODUCT.md" \
+         | grep -oP 'https://github\.com/[^/]+/[^/]+/pull/\d+' | head -1)
+       # Extract owner/repo and PR number, then: gh pr view <N> --repo <owner/repo> --json author --jq '.author.login'
+       ```
+    3. **Search the origin repo PRs** — try the repo that actually owns the code (checking both the public mirror and the private source if accessible):
+       ```bash
+       gh pr list --search "specs/${SPEC_ID}" --repo warpdotdev/warp-internal --state merged --json author --limit 1 --jq '.[0].author.login'
+       # Also try: gh pr list --search "specs/${SPEC_ID}" --repo warpdotdev/warp --state merged --json author --limit 1 --jq '.[0].author.login'
+       ```
+       Skip any result where the login contains `[bot]`.
+    4. **Fall back to commit author email** — only if the email does NOT contain `[bot]`:
+       ```bash
+       EMAIL=$(git log --follow -1 --pretty=format:"%ae" -- "specs/${SPEC_ID}/PRODUCT.md")
+       ```
+       If `${EMAIL}` is non-empty and bot-free, resolve it to a handle via `gh api "search/users?q=${EMAIL}+in:email" --jq '.items[0].login'`.
+    5. If no handle is found after all steps, use `[TODO: tag spec author]` as a placeholder in the PR body.
 
 For each claim you verify from code, mark it confirmed. For claims you can't verify (UI behavior not in code, product intent, behavior of unreleased features), flag them as `[UNVERIFIED]` in the outline — those are the only things the engineer needs to focus on.
 
