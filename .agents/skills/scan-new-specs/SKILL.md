@@ -12,8 +12,6 @@ Scan `warpdotdev/warp` and `warp-server` for recently merged product or tech spe
 
 In both cases, post a summary to `#growth-docs`.
 
-> **TODO for reviewers:** `#growth-docs` is a temporary channel for engineer pings. Identify a more appropriate eng-facing channel (e.g. a shared eng/docs channel, `#dev`, or a dedicated `#docs-requests` channel) once this workflow is established.
-
 ## Configuration
 
 Before running, confirm these values (or accept the defaults):
@@ -21,7 +19,7 @@ Before running, confirm these values (or accept the defaults):
 | Setting | Default | Description |
 |---|---|---|
 | `LOOKBACK_DAYS` | `3` | How many days back to scan for merged spec PRs |
-| `SLACK_CHANNEL` | `#growth-docs` | Slack channel for engineer pings and summaries (temporary — see TODO above) |
+| `SLACK_CHANNEL` | `#growth-docs` | Slack channel for engineer pings and summaries |
 | `SLACK_BOT_TOKEN` | From `buzz` environment | Slack bot token for posting via API (already available in the `buzz` Oz environment) |
 
 This skill uses the Slack API (`chat.postMessage`) rather than an incoming webhook, which enables real user pings. The `buzz` Oz environment already has the required `SLACK_BOT_TOKEN`. No new secrets setup is needed.
