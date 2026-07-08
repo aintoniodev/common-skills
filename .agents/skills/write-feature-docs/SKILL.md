@@ -344,17 +344,17 @@ After generating the draft, submit it to `warpdotdev/docs` automatically:
    { label: '<Feature name>', link: '/<section>/<feature-name>/' },
    ```
 4. Commit and push on a new branch named `docs/<spec-id>-feature-draft`
-5. **Write the PR body using the `create_file` tool**, then open a **draft PR** in `warpdotdev/docs` with `--body-file`. The PR description must include:
+5. **Write the PR body to a temp file, then open a draft PR with `--body-file`**. The PR description must include:
    - The feature name and spec ID
    - A link to the original spec PR
    - A list of all `[UNVERIFIED]` and `[TODO]` items in the draft for reviewer attention
 
-   Use `create_file` to write the body to `/tmp/pr-body.md`, then pass it to `gh`:
+   Write the body to `/tmp/pr-body.md` using whatever file-writing method is available (a file-creation tool, a Python `open()` call, or a shell `cat` with a quoted heredoc), then pass it to `gh`:
    ```bash
    gh pr create --draft --body-file /tmp/pr-body.md ...
    ```
 
-   **Never write the PR body via a shell command** (heredoc, `echo`, `printf`, or `--body "..."`). Shell tools process backticks, `[x]` glob patterns, and `$vars` inside the string before writing — corrupting markdown content. The `create_file` tool writes bytes directly to disk without any shell interpretation, making it the only safe method for PR bodies that contain markdown with backticks or `[ ]` / `[x]` checkbox syntax.
+   **Never pass the PR body inline** (via `--body "..."`, `echo`, or `printf` piped directly to `gh`). Shell string interpolation expands backticks, `$vars`, and `[ ]` glob patterns before the string reaches `gh`, corrupting any markdown that contains those characters. Writing to a file first avoids all shell interpretation of the content.
 
    **In the "Docs outline" section of the PR body, use plain bullet points** (`-`) for agent-verified items, not `- [x]` checkboxes. Reserve `- [ ]` checkboxes only for the "Items needing review" section so reviewers know exactly which items require their action.
 
