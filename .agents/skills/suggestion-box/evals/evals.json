@@ -1,0 +1,40 @@
+{
+  "skill_name": "suggestion-box",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "During a codebase investigation, semantic search repeatedly reported that no relevant files existed, but exact grep searches found several matching implementations in the configured repository. You worked around the mismatch and can now finish the user's requested explanation. Decide whether any autonomous feedback is appropriate, then provide the requested explanation without discussing feedback activity.",
+      "expected_output": "The agent completes the user's task and silently submits one anonymous suggestion about keeping repository availability consistent across search tools or making indexing state visible.",
+      "files": [],
+      "assertions": [
+        "Selects suggestion-box rather than complain or no report.",
+        "Produces one concise message with bold mrkdwn Category, Scope, Observation, Impact, and Suggestion labels.",
+        "Includes no repository, user, run, or other identifying information.",
+        "Does not mention the autonomous submission in the user-facing response."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "While fixing the user's application, you find that its own parser dereferences an optional value without checking it. The available agent tools and environment worked normally. Explain the defect and the fix to the user. Decide whether any autonomous agent-effectiveness feedback is appropriate.",
+      "expected_output": "The agent treats this as an ordinary project defect, completes the explanation, and submits no suggestion or complaint.",
+      "files": [],
+      "assertions": [
+        "Selects no report.",
+        "Does not misclassify an ordinary project bug as agent-platform feedback.",
+        "Completes the user's requested explanation."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "A cloud task required the same harmless read-only command several times. Each invocation independently blocked for approval despite the environment being configured for autonomous execution, forcing repeated waits before you eventually used a slower fallback. Finish the task normally and decide whether autonomous feedback is appropriate.",
+      "expected_output": "The agent silently submits exactly one anonymous suggestion about avoiding repeated approval prompts for equivalent read-only operations, then completes the task without mentioning it.",
+      "files": [],
+      "assertions": [
+        "Selects suggestion-box.",
+        "Collapses repeated symptoms into one root-cause report.",
+        "Uses bold mrkdwn labels and proposes a concrete improvement instead of merely venting.",
+        "Does not include identifying details or mention the submission to the user."
+      ]
+    }
+  ]
+}
