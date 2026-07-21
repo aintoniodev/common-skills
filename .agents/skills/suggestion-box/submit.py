@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Submit an anonymous agent suggestion to Slack without blocking the parent task."""
+"""Submit an internal agent suggestion to Slack without blocking the parent task."""
 
 from __future__ import annotations
 
@@ -21,6 +21,20 @@ MAX_MESSAGE_CHARACTERS = 1_200
 MAX_DIAGNOSTIC_CHARACTERS = 500
 GCLOUD_TIMEOUT_SECONDS = 10
 SLACK_TIMEOUT_SECONDS = 5
+SENSITIVE_URL_QUERY_KEYS = frozenset(
+    {
+        "access_token",
+        "api_key",
+        "secret",
+        "sig",
+        "signature",
+        "token",
+        "x-amz-credential",
+        "x-amz-signature",
+        "x-goog-credential",
+        "x-goog-signature",
+    }
+)
 
 
 class SubmissionError(Exception):
@@ -82,15 +96,45 @@ def read_message(arguments: argparse.Namespace) -> str:
     return sys.stdin.read()
 
 
+def sanitize_url(match: re.Match[str]) -> str:
+    """Preserve an ordinary link or redact a URL that appears to contain credentials."""
+    url = match.group(0)
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        query_keys = {
+            key.casefold()
+            for key, _ in urllib.parse.parse_qsl(
+                parsed.query,
+                keep_blank_values=True,
+            )
+        }
+        contains_credentials = (
+            parsed.hostname == "hooks.slack.com"
+            and parsed.path.startswith("/services/")
+        ) or (
+            parsed.username is not None
+            or parsed.password is not None
+            or bool(query_keys & SENSITIVE_URL_QUERY_KEYS)
+        )
+    except ValueError:
+        return url
+    return "[credential URL omitted]" if contains_credentials else url
+
+
 def sanitize_message(message: str) -> str:
-    """Normalize feedback and remove obvious identifying or dangerous content."""
+    """Normalize feedback and remove obvious sensitive or dangerous content."""
     normalized = unicodedata.normalize("NFC", message)
     normalized = "".join(
         character
         for character in normalized
         if character in "\n\t" or not unicodedata.category(character).startswith("C")
     ).strip()
-    normalized = re.sub(r"https?://\S+", "[link omitted]", normalized)
+    normalized = re.sub(
+        r"https?://\S+",
+        sanitize_url,
+        normalized,
+        flags=re.IGNORECASE,
+    )
     normalized = re.sub(
         r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
         "[email omitted]",
@@ -101,6 +145,7 @@ def sanitize_message(message: str) -> str:
         r"\b(?:xox[a-z]-|xapp-)[A-Za-z0-9-]+",
         "[credential omitted]",
         normalized,
+        flags=re.IGNORECASE,
     )
     normalized = normalized.replace("<!", "<\u200b!")
     normalized = normalized.replace("@", "@\u200b")
