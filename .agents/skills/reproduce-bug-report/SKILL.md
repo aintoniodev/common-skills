@@ -1,11 +1,11 @@
 ---
 name: reproduce-bug-report
-description: Launch Oz cloud agents with computer use to reproduce UI-focused bug reports, capture visual evidence, and report reproduction findings. Use when investigating a specific interactive or visual bug from an issue, ticket, support report, or prompt.
+description: Launch Oz cloud agents with computer use to reproduce UI-focused bug reports, capture visual evidence (a screen recording by default), and report reproduction findings. Use when investigating a specific interactive or visual bug from an issue, ticket, support report, or prompt.
 ---
 
 # Reproduce bug report
 
-Use this skill when the current context is a GitHub issue, support report, Linear ticket, or user prompt describing a specific bug that may be reproduced through visible application behavior. It is primarily for UI, rendering, windowing, settings, editor, terminal-display, onboarding, or other interactive bugs where screenshots or recordings make the result more actionable.
+Use this skill when the current context is a GitHub issue, support report, Linear ticket, or user prompt describing a specific bug that may be reproduced through visible application behavior. It is primarily for UI, rendering, windowing, settings, editor, terminal-display, onboarding, or other interactive bugs where a screen recording (or screenshots) makes the result more actionable.
 
 The parent agent should not try to manually reproduce the UI bug locally unless the user explicitly asks. Launch one or more Oz cloud agents with computer use enabled so they can run the relevant app, interact with it, and capture visual evidence.
 
@@ -18,7 +18,7 @@ The parent agent should not try to manually reproduce the UI bug locally unless 
    - OS, app version/build/channel, shell, feature flags, account state, or other environment constraints when relevant
    - attached screenshots, videos, logs, or comments that narrow the repro path
 2. Decide whether this skill applies:
-   - Use it for UI-visible bugs, interaction bugs, rendering/layout bugs, onboarding bugs, and bugs where screenshot evidence would be useful.
+   - Use it for UI-visible bugs, interaction bugs, rendering/layout bugs, onboarding bugs, and bugs where a screen recording (or screenshots) would be useful.
    - Do not use it for purely backend, CI, build, dependency, or text-only code issues unless the prompt specifically asks for visual reproduction.
    - If the report requires credentials, private account state, or another capability not available to the repro environment, report that constraint clearly instead of guessing.
 3. If the reproduction path is straightforward, launch one Oz cloud agent with computer use.
@@ -46,7 +46,7 @@ The consuming repository may ship a companion `reproduce-bug-report-local` skill
 Use a `run_agents` call shaped like this:
 
 ```text
-summary: Launching Oz cloud computer-use agents to reproduce the reported UI bug and collect screenshots.
+summary: Launching Oz cloud computer-use agents to reproduce the reported UI bug and capture a screen recording.
 remote.computer_use_enabled: true
 agent_run_configs:
 - name: "repro-primary"
@@ -67,7 +67,7 @@ You are trying to reproduce a reported UI bug using Oz cloud computer use.
 
 Goal:
 - Reproduce the reported behavior as faithfully as possible.
-- Capture screenshots before and after each meaningful interaction.
+- Capture a screen recording of the reproduction by default; most UI bugs involve motion, a transition, or a multi-step interaction, so a clip is stronger proof than stills. Capture screenshots as a supplement, or as the primary artifact only for a genuinely static render.
 - If the provided steps are unclear or incomplete, use codebase and product knowledge to identify plausible app states that could produce the reported behavior, then test the assigned hypothesis.
 - Report clear reproduction evidence, not just opinions.
 
@@ -82,12 +82,13 @@ Safety and privacy:
 - Do not include secrets, auth tokens, private URLs, Authorization headers, or refresh tokens in screenshots, logs, manifests, or final reports.
 - Do not create or sign into an account unless the prompt and repository-specific guidance explicitly authorize a safe test-auth workflow.
 - If the assigned report cannot be exercised within the allowed auth/state constraints, stop and report the blocker.
-- Do not post comments to GitHub, Linear, Slack, or external services unless explicitly instructed.
+- Do not post comments to GitHub, Linear, or external services unless explicitly instructed. When a Slack thread context is provided (a channel id and thread), post the reproduction proof (the recording) back to that thread so the requester sees it; do not post to any other channel or service.
 - Avoid destructive actions. If a repro requires deleting app state, delete only test state for the current repro environment and report exactly what was reset.
 
 Artifact workflow:
 - Create a dedicated artifact directory named for your variant, such as `~/bug-repro-primary`.
-- Save screenshots with ordered filenames, such as `01-initial-state.png`, `02-before-click-settings.png`, and `03-after-click-settings.png`.
+- Record a screen recording of the reproduction by default and save it in the artifact directory with a descriptive name such as `repro.mp4`.
+- Capture screenshots as a supplement (or as the primary artifact only for a genuinely static render) with ordered filenames, such as `01-initial-state.png`, `02-before-click-settings.png`, and `03-after-click-settings.png`.
 - Maintain a short manifest in the artifact directory with:
   - screenshot filename
   - timestamp
@@ -102,7 +103,7 @@ Reproduction workflow:
 3. If no exact reporter version is available, record that the version is unknown and choose the most defensible install target for the report; state the fallback explicitly.
 4. Start from the cleanest state that matches the report. Do not reset app state if the bug depends on existing settings or persisted local state.
 5. Reach the baseline app state required by the report before attempting the bug-specific reproduction.
-6. Capture the baseline screenshot before attempting the bug-specific reproduction.
+6. Start the screen recording and capture a baseline screenshot before attempting the bug-specific reproduction.
 7. Follow the exact provided bug reproduction steps first, when available.
 8. If exact steps do not reproduce, test the assigned hypothesis and document where it diverges from the report.
 9. If the bug appears, stop changing variables and capture enough evidence to make the reproduction actionable.
@@ -122,7 +123,7 @@ Report back:
 - Environment and app/build information.
 - Reporter-requested app version/build/channel, installed test version/build/channel, and the artifact source or fallback explanation.
 - Whether the observed behavior matched the report, and how closely.
-- Screenshot list with short descriptions and artifact paths or attachment names.
+- The screen recording (and any supplementary screenshots) with short descriptions and artifact paths or attachment names.
 - Any logs, crash output, or diagnostics collected, with secrets redacted.
 - The most likely code path or state involved, if investigated.
 - Suggested next debugging step or follow-up question, only if it would materially change the next action.
@@ -164,7 +165,7 @@ Start by tracing likely code paths from strings, UI labels, settings names, feat
 
 A successful use of this skill produces:
 
-- A confirmed reproduction with screenshots and exact steps, or a well-scoped non-reproduction with tested assumptions.
+- A confirmed reproduction with a screen recording (and screenshots where useful) and exact steps, or a well-scoped non-reproduction with tested assumptions.
 - Clear artifact paths or attachments for visual evidence.
 - A concise summary of which variants were tested and which were not.
 - Enough environment detail for an engineer to repeat the test.
