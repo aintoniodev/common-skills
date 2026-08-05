@@ -79,7 +79,7 @@ Inputs:
 
 Safety and privacy:
 - Do not ask the public reporter for credentials, tokens, private repos, private workspace names, or private account identifiers.
-- Do not include secrets, auth tokens, private URLs, Authorization headers, or refresh tokens in screenshots, logs, manifests, or final reports.
+- Do not include secrets, auth tokens, private URLs, Authorization headers, refresh tokens, or other private account details in recordings, screenshots, logs, manifests, or final reports.
 - Do not create or sign into an account unless the prompt and repository-specific guidance explicitly authorize a safe test-auth workflow.
 - If the assigned report cannot be exercised within the allowed auth/state constraints, stop and report the blocker.
 - Do not post comments to GitHub, Linear, or external services unless explicitly instructed. When a Slack thread context is provided (a channel id and thread), post the reproduction proof (the recording) back to that thread so the requester sees it; do not post to any other channel or service.
