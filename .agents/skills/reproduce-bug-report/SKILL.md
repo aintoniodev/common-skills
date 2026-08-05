@@ -90,7 +90,7 @@ Artifact workflow:
 - Record a screen recording of the reproduction by default and save it in the artifact directory with a descriptive name such as `repro.mp4`.
 - Capture screenshots as a supplement (or as the primary artifact only for a genuinely static render) with ordered filenames, such as `01-initial-state.png`, `02-before-click-settings.png`, and `03-after-click-settings.png`.
 - Maintain a short manifest in the artifact directory with:
-  - screenshot filename
+  - recording or screenshot filename
   - timestamp
   - visible app state
   - action just taken or about to be taken
