@@ -1,6 +1,6 @@
 ---
 name: sweep-low-value-tests
-description: Sweep an existing test suite for low-value tests - tests that re-assert the source, assert implementation instead of behavior, duplicate coverage, or exist only to justify a production seam - then delete them in reviewable batches and remove the seams they leave behind. Use when asked to sweep for low-value tests, prune or clean up a test suite, do a test cleanup pass, remove tests that re-assert the source, or find tests that should not be in the codebase.
+description: Sweep an existing test suite for low-value tests - tests that re-assert the source, assert implementation instead of behavior, duplicate coverage, or exist only to justify a production seam - then fix, narrow, or delete them in reviewable batches and remove the seams they leave behind. Use when asked to sweep for low-value tests, prune or clean up a test suite, do a test cleanup pass, remove tests that re-assert the source, or find tests that should not be in the codebase.
 ---
 
 # Sweep Low-Value Tests
@@ -9,7 +9,7 @@ description: Sweep an existing test suite for low-value tests - tests that re-as
 
 A sweep is not a code review. A review reads a diff and reacts to what an author just added. A sweep reads a suite that was merged months ago, with no diff to anchor on: it has to find candidates at scale, rank them, prove each deletion did not drop real coverage, and remove the production indirection the deletions leave dead.
 
-Deleting a test is not the goal. A suite you trust is the goal. A sweep that drops real coverage is worse than no sweep, and "found nothing worth deleting here" is a valid result.
+Deleting a test is not the goal. A suite you trust is the goal. A sweep that drops real coverage is worse than no sweep, and "found nothing worth deleting here" is a valid result. Most of what a sweep finds wants a one-line fix, not a deletion.
 
 Counterpart: the factory `code-review` skill (`v1/skills/code-review/SKILL.md` in `warpdotdev/factory-dev`) applies the same criteria to a single diff at review time. When the criteria change in one, update the other.
 
