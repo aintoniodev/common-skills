@@ -18,7 +18,7 @@ Counterpart: the factory `code-review` skill (`v1/skills/code-review/SKILL.md` i
 1. Pick a bounded target.
 2. Surface candidates mechanically.
 3. Judge each candidate.
-4. Rank into delete, rewrite, ask, keep.
+4. Rank into fix, rewrite, delete, ask, keep.
 5. Prove each deletion is safe.
 6. Delete in reviewable batches.
 7. Remove the dead seams.
@@ -27,7 +27,20 @@ Counterpart: the factory `code-review` skill (`v1/skills/code-review/SKILL.md` i
 
 This question is the whole skill; the categories below are only shorthand for its common answers. Apply it to each test or case, where a table row or a subtest is a case: what behavior change would make this fail, and would that failure be a real defect that no other test catches? When the honest answer is "a behavior-preserving refactor", "nothing", or "a higher-level test already covers it", the test is a candidate.
 
-The unit of judgment is the assertion, not the file. A bad assertion inside a good test is a candidate on its own - remove the line, keep the test.
+Never delete a test because it matches a category name. A `Default` test is trivial-code by its name and vital when the default is a security posture. Reach for a name, then answer the question, and let the question win. A sweep reads at volume, which is exactly the condition under which name-matching replaces thinking.
+
+When the answer is "nothing", check whether the behavior the test *names* is real and uncovered before proposing removal. An assertion that only runs inside an `if`, or a case that pins the pass-through and skips the error branch, is a coverage finding wearing a test-value costume: the test does not do its job, and the correction is to make it do it. A deletion must also carry any coverage gap it exposes - the branch check that condemns one case routinely reveals the arm nobody tested, and that gap is worth more than the deletion.
+
+### The remediation ladder
+
+The unit of judgment is the assertion, not the file. Take the least destructive correction that removes the problem:
+
+1. Fix the assertion, keep the test.
+2. Narrow the case to the distinct path it adds.
+3. Move the test to the level where the behavior is observable.
+4. Delete.
+
+Every candidate records its rung and why the rung above does not work. Rung 1 dominates by site count - a redundant assertion inside an otherwise sound test is the commonest defect in a mature suite - but a cluster of cases that all assert one branch is rung 2, not rung 1. A sweep that reports mostly rung 4 has either found an unusual suite or stopped reading carefully; assume the second.
 
 ## 1. Pick a bounded target
 
@@ -84,29 +97,40 @@ Every heuristic here nominates a file to read; none of them convicts one. The na
 
 Shared with the review-time gate:
 
-- **Change-detector**: asserts a call sequence, private state, or - in a UI test - a test id, a CSS class, a DOM shape, or a markup snapshot rather than what a user can see or do. Rewrite as an assertion on state or on rendered output, or delete.
-- **Tautological**: re-asserts a literal or a constant from the source, or verifies the stub instead of the unit under test. Delete.
-- **Framework-enforced**: asserts what the framework already guarantees, such as "this mock was not called" on a strict mock that fails on any unexpected call. Delete the assertion, keep the test.
-- **Trivial code**: a getter, a pass-through conversion, a default, plain construction, or reading back a config or flag default. Delete.
-- **Duplicative**: a near-identical case another test already covers. Confirm the cases reach the same branch first; near-identical inputs often do not. Delete, or narrow it to the distinct path it adds.
+- **Change-detector**: asserts a call sequence, private state, or - in a UI test - a class list, a DOM shape, a markup snapshot, or a test id the component ships, rather than what a user can see or do. Rewrite it as an assertion on state or on rendered output; the behavior is usually real. Flag a class or markup assertion only when the same behavior is visible in accessible state, role, or text: under a headless DOM no styles compute, so the class list can be the unit's only observable output. A test id the test itself planted as a stand-in is not a finding.
+- **Tautological**: re-asserts a literal or a constant from the source, or verifies the stub instead of the unit under test. Drop the assertion; the test survives when it has others.
+- **Framework-enforced**: asserts what the framework already guarantees, such as "this mock was not called" on a strict mock that already fails on any unexpected call. Drop the assertion, keep the test. Read "Scoping a framework-enforced assertion" below first - this is the largest surface in a mock-heavy suite, it is rung 1 at every site, and it is the easiest to get wrong at volume.
+- **Trivial code**: a getter, a pass-through conversion, a default, plain construction, or reading back a config or flag default. Nothing can break independently, so rung 4.
+- **Duplicative**: a near-identical case another test already covers. Confirm the cases reach the same branch *and* play the same boundary role first; near-identical inputs often do not, and the extremum of a range earns its own case even when it shares a branch. Two rows hitting `hour < 12` are duplicates until one of them is hour zero. Narrow the cluster to the distinct path it adds, and delete only when there is none.
 - **Wrong-level**: a unit test reaching for what a higher-level test covers. Real IO is not by itself wrong-level - escalate when the IO is incidental to the logic, never when the IO is the subject. A log rotator's tests belong on a real filesystem.
 
 Species a sweep finds that a diff review cannot:
 
 - **Orphaned**: the sweep-time form of an out-of-scope test. Its subject no longer exists in the form it tests, or the production code it exercises has no caller but the test. Delete the test; route the production deletion to a human.
 - **Never-load-bearing**: the sweep-time form of scaffolding. The author is gone, so decide it on evidence instead of intent - `git log --follow` shows only mechanical edits (renames, signature churn, compile fixes) and no commit where it changed as part of a bug fix, and step 5 shows another test already fails when the behavior breaks.
-- **Assertion-free**: sets up state, calls the unit, and asserts nothing. The name claims a behavior the body never checks.
+- **Assertion-free**: sets up state, calls the unit, and asserts nothing - including an assertion that only fires inside a conditional the test never enters. The name claims a behavior the body never checks. Rung 1 whenever that behavior is real and uncovered: make the assertion unconditional, or add it. Delete only when the behavior is not real or is already covered.
 - **Quarantined**: skipped or ignored with no live owner. When the linked ticket is stale or the data it guards is now empty, delete it; a permanently skipped test is a false signal of coverage.
 - **Harness**: the subject is test infrastructure rather than product code - asserting a mock store holds exactly 31 fixtures, so adding a 32nd fails.
 - **Config-mirror**: asserts the literal contents of a config file, including that a flag is still off, so it has to be edited to ship the feature it guards.
-- **Frozen incidental output**: pins an exact value that was only ever incidental - an exact draw count from a fixed-seed generator under a comment reading "about half the time", where the intent was a tolerance band.
+- **Frozen incidental output**: pins an exact value that was only ever incidental - an exact draw count from a fixed-seed generator under a comment reading "about half the time", where the intent was a tolerance band. Rung 1: widen the assertion, never delete it.
 - **Third-party-shape**: asserts a dependency's own export shape rather than this repository's usage of it.
 
-When a test fits two categories, take the more severe.
+When a test fits two categories, take the one that lands on the higher rung.
+
+### Scoping a framework-enforced assertion
+
+On a strict mock - one constructed with the test handle, so it fails on any unexpected call - a negative call assertion restates the framework's own guarantee **only when no live expectation for that method exists on that mock instance in that subtest**. The precise rules:
+
+- A "was not called" assertion with no live expectation for the method: framework-enforced, delete the line.
+- A "was called" assertion: framework-enforced only when a non-optional expectation with matching arguments already exists. An expectation marked optional is what flips the assertion from redundant to load-bearing, since the framework no longer requires the call.
+- A call-count assertion: essentially never framework-enforced, because registering an expectation permits unlimited calls. Leave it.
+- An explicit "assert all expectations met" call on a strict mock: always redundant.
+
+Scope every check to the mock instance and the subtest. An expectation registered in a sibling subtest is indistinguishable from a live one to a grep, and that single mistake produced 149 false leads in one automated scan. A candidate list from the interaction grep is not reviewable until it has been scoped this way.
 
 ## Never delete these
 
-- **A test that pins an externally observable contract**: a telemetry key, a wire format, a CLI surface, a serialized shape, or the absence of an interface implementation. It restates a literal on purpose. The literal is a promise to consumers outside the repository, nothing else fails when it silently changes, and no type checker guards it. This exemption outranks the tautological and trivial-code categories.
+- **A case that pins a contract another system depends on**, where nothing else fails when the value silently changes: a flag spelling, a JSON field name, a telemetry key, a wire format, the absence of an interface implementation. This exemption outranks the tautological and trivial-code categories. Three limits on it. The consumer must depend on the literal, not merely read it, so help prose and log wording are not contracts. The case must observe the value where that consumer does - through the serializer, the endpoint, or the rendered surface - because reading a constant back off the object that defines it is still tautological. And "another system" means outside the unit's compile-time reach, not outside the repository: two packages in one monorepo matching a string with no shared type qualify.
 - **A call assertion where the collaborator is the unit's only observable output.** Not spawning a duplicate agent, not writing a second row, not sending a second request - the call is the behavior. Flag one only when the same behavior is visible in the return value or in state the test can read.
 - **A small test.** A one-line assertion that pins a real boundary, an edge case, or a fixed regression is valuable. The burden is "what defect does this catch", never "is this test big enough".
 - **A test that references a bug or issue ID.** It exists because something actually broke.
@@ -114,10 +138,11 @@ When a test fits two categories, take the more severe.
 
 ## 4. Rank
 
-Order by confidence, and act by tier:
+Order by confidence, and act by tier. The tiers run in ladder order, and that is also their expected size:
 
-- **Delete**: tautological, trivial-code, duplicative, orphaned, assertion-free, harness, and config-mirror tests. Every deletion still goes through step 5 first.
-- **Rewrite**: a change-detector test whose underlying behavior is real and uncovered, and a frozen incidental assertion that should be a tolerance band. Never delete one and leave the behavior unguarded.
+- **Fix or narrow** (rungs 1-2): a framework-enforced assertion, an assertion that only fires inside a conditional, a frozen incidental value that should be a tolerance band, a cluster of cases that all reach one branch. The test stays. Expect this to be the largest tier.
+- **Rewrite** (rungs 1-3): a change-detector test whose underlying behavior is real and uncovered, or a test at the wrong level. Never delete one and leave the behavior unguarded.
+- **Delete** (rung 4): tautological, trivial-code, orphaned, harness, and config-mirror tests - where the question, not the name, put them here, and where no higher rung applies. Every deletion goes through step 5 first and carries any coverage gap it exposed.
 - **Ask a human**: anything where the behavior the test guards is unclear, anything step 5 cannot settle, any deletion of production code, and anything in an authentication, authorization, billing, or data-integrity path. Hand these over with the reasoning; do not decide them on the sweep's own judgment.
 - **Keep**: everything else. Default here.
 
@@ -127,7 +152,7 @@ Deleting a test always makes the suite pass, so a green run proves nothing. Prov
 
 1. Name the behavior the candidate claims to cover.
 2. Break that behavior in the production code: invert a condition, return a wrong constant, drop a branch.
-3. Run the target's tests with the candidate still present. It must fail. If it does not, the test does not cover what it claims: re-read it to find what it does cover, and delete it when the answer is nothing.
+3. Run the target's tests with the candidate still present. It must fail. If it does not, the test does not cover what it claims: re-read it to find what it does cover. When the behavior it names is real and uncovered, fix the test instead of deleting it; delete only when it covers nothing anyone needs.
 4. Remove the candidate and run again. If something else fails, the coverage is duplicated and the deletion is safe. If nothing fails, the candidate was the only guard: do not delete it, rewrite it as a behavior assertion instead.
 5. Revert the production break. Confirm the tree is clean before moving on.
 
@@ -145,9 +170,11 @@ One break can clear several candidates that claim the same behavior. Record, per
 
 Production indirection that existed only to serve a deleted test may now be dead, and removing it is the payoff the sweep is for.
 
-Apply a cost test before touching any of it: is the behavior the seam exposes reachable at comparable cost without it? Extracting logic into a directly testable unit is a legitimate design, and a seam that makes the code clearer regardless of testing stays. Remove a seam only when it fails that test, and never remove one together with tests you have not already cleared through step 5.
+Remove a seam only when the behavior it exposes is reachable at comparable cost without it. A seam that is the only affordable route to the behavior stays, whatever its motive, and a doc comment admitting the motive does not change that. Gratuitous indirection is distinguished by having a cheap alternative, not by why it was added; extracting logic into a directly testable unit is a legitimate design.
 
-For the seams that do fail it:
+Before removing one, name what replaces any tests it still carries. If you cannot, there is no removal. Never remove a seam together with tests that have not already cleared step 5.
+
+For the seams that do fail the cost test:
 
 ```bash
 # The repository's own dead-code check first - it finds most of it.
@@ -167,4 +194,4 @@ Beyond the exemptions in "Never delete these":
 
 - **A coverage drop is not proof of harm, and a coverage target is not the goal.** Step 5 is the proof.
 - **Never chase a deletion count.** The pressure to hit a number is much stronger in a sweep than at review time, and it is exactly how a sweep starts deleting real coverage.
-- **Defer to the repository's own testing skills** when they exist, including per-package ones. They state the local rules; this skill states the judgment. When two packages in the same repository mandate opposite styles, that is a question for a human, not something to resolve mid-sweep.
+- **Defer to the repository's own testing skills** when they exist, including per-package ones. They state the local rules; this skill states the judgment. Check a local rule against the repository before enforcing it: a skill that forbids a library the repository now declares as a dependency is stale, and a stale rule is a finding to report, not a rule to sweep by. When two packages in the same repository mandate opposite styles, that is a question for a human, not something to resolve mid-sweep.
