@@ -25,9 +25,9 @@ Counterpart: the factory `code-review` skill (`v1/skills/code-review/SKILL.md` i
 
 ## The decision question
 
-This question is the whole skill; the categories below are only shorthand for its common answers. Apply it to each test or case, where a table row or a subtest is a case: what behavior change would make this fail, and would that failure be a real defect that no other test catches? When the honest answer is "a behavior-preserving refactor", "nothing", or "a higher-level test already covers it", the test is a candidate.
+This question is the whole skill; the names used below are only shorthand for its common answers. Apply it to each test or case, where a table row or a subtest is a case: what behavior change would make this fail, and would that failure be a real defect that no other test catches? When the honest answer is "a behavior-preserving refactor", "nothing", or "a higher-level test already covers it", the test is a candidate.
 
-Never delete a test because it matches a category name. A `Default` test is trivial-code by its name and vital when the default is a security posture. Reach for a name, then answer the question, and let the question win. A sweep reads at volume, which is exactly the condition under which name-matching replaces thinking.
+Never delete a test because it matches one of those names. A `Default` test reads as trivial and is vital when the default is a security posture. Reach for a name, then answer the question, and let the question win. A sweep reads at volume, which is exactly the condition under which name-matching replaces thinking.
 
 When the answer is "nothing", check whether the behavior the test *names* is real and uncovered before proposing removal. An assertion that only runs inside an `if`, or a case that pins the pass-through and skips the error branch, is a coverage finding wearing a test-value costume: the test does not do its job, and the correction is to make it do it. A deletion must also carry any coverage gap it exposes - the branch check that condemns one case routinely reveals the arm nobody tested, and that gap is worth more than the deletion.
 
@@ -95,14 +95,9 @@ Every heuristic here nominates a file to read; none of them convicts one. The na
 
 ## 3. Judge each candidate
 
-Shared with the review-time gate:
+Answer the decision question against the production code, never against the test's name or shape. You will usually be reaching that answer because the assertion restates a literal or a constant from the source; because it checks what the framework already enforces, such as a not-called assertion on a mock that already fails on any unexpected call; because the subject is a getter, a default, or plain construction; because another case already reaches the same branch; or because the test asserts a call sequence or private state instead of an outcome. Those are conclusions to arrive at, not patterns to match.
 
-- **Change-detector**: asserts a call sequence, private state, or - in a UI test - a class list, a DOM shape, a markup snapshot, or a test id the component ships, rather than what a user can see or do. Rewrite it as an assertion on state or on rendered output; the behavior is usually real. Flag a class or markup assertion only when the same behavior is visible in accessible state, role, or text: under a headless DOM no styles compute, so the class list can be the unit's only observable output. A test id the test itself planted as a stand-in is not a finding.
-- **Tautological**: re-asserts a literal or a constant from the source, or verifies the stub instead of the unit under test. Drop the assertion; the test survives when it has others.
-- **Framework-enforced**: asserts what the framework already guarantees, such as "this mock was not called" on a strict mock that already fails on any unexpected call. Drop the assertion, keep the test. Read "Scoping a framework-enforced assertion" below first - this is the largest surface in a mock-heavy suite, it is rung 1 at every site, and it is the easiest to get wrong at volume.
-- **Trivial code**: a getter, a pass-through conversion, a default, plain construction, or reading back a config or flag default. Nothing can break independently, so rung 4.
-- **Duplicative**: a near-identical case another test already covers. Confirm the cases reach the same branch *and* play the same boundary role first; near-identical inputs often do not, and the extremum of a range earns its own case even when it shares a branch. Two rows hitting `hour < 12` are duplicates until one of them is hour zero. Narrow the cluster to the distinct path it adds, and delete only when there is none.
-- **Wrong-level**: a unit test reaching for what a higher-level test covers. Real IO is not by itself wrong-level - escalate when the IO is incidental to the logic, never when the IO is the subject. A log rotator's tests belong on a real filesystem.
+Read "Scoping a framework-enforced assertion" below before acting on the framework case. It is the largest surface in a mock-heavy suite, it is rung 1 at every site, and it is the easiest to get wrong at volume.
 
 Species a sweep finds that a diff review cannot:
 
@@ -115,7 +110,7 @@ Species a sweep finds that a diff review cannot:
 - **Frozen incidental output**: pins an exact value that was only ever incidental - an exact draw count from a fixed-seed generator under a comment reading "about half the time", where the intent was a tolerance band. Rung 1: widen the assertion, never delete it.
 - **Third-party-shape**: asserts a dependency's own export shape rather than this repository's usage of it.
 
-When a test fits two categories, take the one that lands on the higher rung.
+When a test fits two of these, take the one that lands on the higher rung.
 
 ### Scoping a framework-enforced assertion
 
@@ -130,9 +125,14 @@ Scope every check to the mock instance and the subtest. An expectation registere
 
 ## Never delete these
 
-- **A case that pins a contract another system depends on**, where nothing else fails when the value silently changes: a flag spelling, a JSON field name, a telemetry key, a wire format, the absence of an interface implementation. This exemption outranks the tautological and trivial-code categories. Three limits on it. The consumer must depend on the literal, not merely read it, so help prose and log wording are not contracts. The case must observe the value where that consumer does - through the serializer, the endpoint, or the rendered surface - because reading a constant back off the object that defines it is still tautological. And "another system" means outside the unit's compile-time reach, not outside the repository: two packages in one monorepo matching a string with no shared type qualify.
-- **A call assertion where the collaborator is the unit's only observable output.** Not spawning a duplicate agent, not writing a second row, not sending a second request - the call is the behavior. Flag one only when the same behavior is visible in the return value or in state the test can read.
-- **A small test.** A one-line assertion that pins a real boundary, an edge case, or a fixed regression is valuable. The burden is "what defect does this catch", never "is this test big enough".
+Each is a case where the thing that looks redundant is the only expression of the behavior.
+
+- **A case pinning a contract another system depends on** where nothing else fails when the value silently changes - a flag spelling, a wire format, a telemetry key, the absence of an interface implementation - provided the case observes the value where that consumer reads it. "Another system" means outside the unit's compile-time reach, not outside the repository. This outranks the tautological and trivial-code readings.
+- **A call assertion where the collaborator is the unit's only observable output.** This includes a not-called assertion where non-invocation is the behavior under test and nothing else fails when the call reappears: the framework's panic is not a substitute for the test stating what it guards.
+- **A class or markup assertion where the rendered class is all the unit exposes.** Where no styles compute, it is the only observable output. Flag one only when the same behavior is visible in accessible state, role, or text - and then the correction is to assert that instead, not to delete.
+- **Real IO where the IO is the subject** rather than incidental to the logic. A log rotator's tests belong on a real filesystem.
+- **A near-identical case that reaches a different branch or pins a boundary the others do not.** Two rows hitting `hour < 12` are duplicates until one of them is hour zero.
+- **A small test.** The burden is "what defect does this catch", never "is this test big enough".
 - **A test that references a bug or issue ID.** It exists because something actually broke.
 - **A failing or flaky test.** That is a different job: fix or quarantine it, do not sweep it away.
 
@@ -141,8 +141,8 @@ Scope every check to the mock instance and the subtest. An expectation registere
 Order by confidence, and act by tier. The tiers run in ladder order, and that is also their expected size:
 
 - **Fix or narrow** (rungs 1-2): a framework-enforced assertion, an assertion that only fires inside a conditional, a frozen incidental value that should be a tolerance band, a cluster of cases that all reach one branch. The test stays. Expect this to be the largest tier.
-- **Rewrite** (rungs 1-3): a change-detector test whose underlying behavior is real and uncovered, or a test at the wrong level. Never delete one and leave the behavior unguarded.
-- **Delete** (rung 4): tautological, trivial-code, orphaned, harness, and config-mirror tests - where the question, not the name, put them here, and where no higher rung applies. Every deletion goes through step 5 first and carries any coverage gap it exposed.
+- **Rewrite** (rungs 1-3): a test asserting a call sequence or private state where the behavior underneath is real and uncovered, or one sitting at the wrong level. Never delete one and leave the behavior unguarded.
+- **Delete** (rung 4): a test restating the source, one whose subject cannot break independently, and the orphaned, harness, and config-mirror species above - where the question, not a name, put them here, and where no higher rung applies. Every deletion goes through step 5 first and carries any coverage gap it exposed.
 - **Ask a human**: anything where the behavior the test guards is unclear, anything step 5 cannot settle, any deletion of production code, and anything in an authentication, authorization, billing, or data-integrity path. Hand these over with the reasoning; do not decide them on the sweep's own judgment.
 - **Keep**: everything else. Default here.
 
@@ -194,4 +194,4 @@ Beyond the exemptions in "Never delete these":
 
 - **A coverage drop is not proof of harm, and a coverage target is not the goal.** Step 5 is the proof.
 - **Never chase a deletion count.** The pressure to hit a number is much stronger in a sweep than at review time, and it is exactly how a sweep starts deleting real coverage.
-- **Defer to the repository's own testing skills** when they exist, including per-package ones. They state the local rules; this skill states the judgment. Check a local rule against the repository before enforcing it: a skill that forbids a library the repository now declares as a dependency is stale, and a stale rule is a finding to report, not a rule to sweep by. When two packages in the same repository mandate opposite styles, that is a question for a human, not something to resolve mid-sweep.
+- **Read the repository's own testing skills and apply what they add**, including per-package ones, after checking their claims still hold against the repository - a rule forbidding a library the repository now declares as a dependency is stale, and a stale rule is a finding to report rather than one to sweep by. They do not displace the exemptions above: a local skill listing `Default` impls or near-identical tests as delete-worthy does not authorise deleting one this skill protects. When two packages in the same repository mandate opposite styles, that is a question for a human, not something to resolve mid-sweep.
