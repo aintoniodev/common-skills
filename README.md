@@ -23,6 +23,8 @@ Each skill lives in its own directory under `.agents/skills/`. The only required
 
 ## Current skills
 
+The list below highlights the most commonly used skills; it is not exhaustive. For the authoritative, always-current list, run `npx skills@latest add warpdotdev/common-skills --list`.
+
 ### Spec workflow
 
 - `write-product-spec` — writes user-facing `PRODUCT.md` specs.
