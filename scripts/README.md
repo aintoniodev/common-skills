@@ -94,7 +94,8 @@ Project installs add local Git exclude entries for only the locked common-skill 
 Global installs are shared across client repositories. A second repo pinned to the same lock verifies and succeeds without unnecessarily reinstalling; a repo pinned to a different lock fails with a version-mismatch error instead of overwriting the shared global install.
 ## Update lock script
 `update_common_skills_lock` non-interactively regenerates an existing `skills-lock.json` from the default branch of `warpdotdev/common-skills` without installing skills into the target repository.
-It generates a candidate in a temporary Git repository, then copies back only a changed `skills-lock.json`. Generator failures and missing candidate output fail the command instead of retaining the existing lock.
+It generates a candidate in a temporary Git repository, then reconciles it before copying back only a changed `skills-lock.json`. Generator failures and missing candidate output fail the command instead of retaining the existing lock.
+The `skills` CLI merges into whatever lock it finds and never removes an entry for a skill that disappeared from the source, so a renamed or deleted skill would otherwise leave a stale entry behind. The script reconciles this: an entry whose `source` is `warpdotdev/common-skills` is dropped unless the same run's `--copy` materialized its `skillPath` under the temporary directory. Entries from any other `source`, including hand-added ones, are left untouched.
 Run it from a consuming repository:
 ```sh
 /path/to/common-skills/scripts/update_common_skills_lock --repo-root /path/to/consumer

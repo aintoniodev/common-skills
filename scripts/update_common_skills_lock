@@ -98,6 +98,44 @@ if [[ ! -f "${TEMP_DIR}/skills-lock.json" ]]; then
   exit 1
 fi
 
+# skills add merges into the seeded lock but never removes an entry whose
+# skill is no longer present in ${COMMON_SKILLS_SOURCE}: a rename or deletion
+# upstream otherwise leaves a stale entry pointing at a skillPath that no
+# longer exists. Reconcile: an entry from that source survives only if this
+# run's --copy actually materialized its skillPath under ${TEMP_DIR}. Entries
+# from any other source are left untouched. This reuses the copy skills add
+# already produced instead of making a second fetch.
+if ! node - "${TEMP_DIR}/skills-lock.json" "${TEMP_DIR}" "${COMMON_SKILLS_SOURCE}" <<'NODE'
+const fs = require("fs");
+const path = require("path");
+
+const lockFile = process.argv[2];
+const tempDir = process.argv[3];
+const source = process.argv[4];
+
+const lock = JSON.parse(fs.readFileSync(lockFile, "utf8"));
+const skills = lock.skills || {};
+let changed = false;
+
+for (const [name, entry] of Object.entries(skills)) {
+  if (entry.source !== source || !entry.skillPath) {
+    continue;
+  }
+  if (!fs.existsSync(path.join(tempDir, entry.skillPath))) {
+    delete skills[name];
+    changed = true;
+  }
+}
+
+if (changed) {
+  fs.writeFileSync(lockFile, JSON.stringify(lock, null, 2) + "\n");
+}
+NODE
+then
+  echo "error: failed to reconcile stale ${COMMON_SKILLS_SOURCE} entries in the candidate skills-lock.json." >&2
+  exit 1
+fi
+
 if cmp -s "${LOCK_FILE}" "${TEMP_DIR}/skills-lock.json"; then
   echo "skills-lock.json is already up to date."
   exit 0
