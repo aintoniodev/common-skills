@@ -11,6 +11,14 @@ Use this skill to answer a question by delegating the *work of finding the answe
 
 Your context window is your most valuable and limited resource. Reading twenty files to discover that three of them mattered permanently pollutes your context with seventeen files of noise, degrading every subsequent decision you make. A subagent absorbs that noise on your behalf and hands you only the signal. Think of it as asking a colleague to dig through the archives and report back, rather than dumping the whole archive on your desk.
 
+## If your own assignment is already the investigation
+
+This skill's trigger ("would require reading many files", "reach for it liberally") reads the same whether you are the one asking for research or the one who was asked. Before delegating, check which one you are.
+
+If you were yourself dispatched to investigate something — a subagent, a child agent, or any delegate whose brief is "look into X and report/distill/summarize" — you are already the colleague digging through the archives for someone else. Delegating again does not remove noise from anyone's context that matters: it just adds a layer of latency and token cost between you and the answer you were asked to produce. Do the reading yourself.
+
+The one legitimate exception is when your own brief genuinely decomposes into independent sub-parts you cannot investigate faster alone (see "Single vs. parallel" below). That is the same tradeoff your own dispatcher made when it delegated to you, not a redundant one — but a single, cohesive investigation assigned to you is not that case, even if it touches many files.
+
 ## When to use it
 
 Reach for research delegation when **the cost of producing the answer is far greater than the answer itself**. Strong signals:
@@ -32,6 +40,7 @@ Reach for research delegation when **the cost of producing the answer is far gre
 - Reading 2–3 files you already know you need. Just read them directly; delegation adds latency for no context savings.
 - A single `grep` or one-line lookup. Do it yourself.
 - **Anything where you need the raw material for your next step.** If you're about to *edit* the files you'd be reading, delegating is counterproductive — you'd just have to re-read them yourself to make the change. Research delegation pays off when the output is a *conclusion*, not when it's *material you'll work on directly*.
+- **Your own assignment is already "go investigate this."** See "If your own assignment is already the investigation" above — do the work instead of handing it to a subagent of your own.
 
 The cost of a subagent is real (latency and tokens), so the test is always: does the noise I'd avoid outweigh that cost?
 
