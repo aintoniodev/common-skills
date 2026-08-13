@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# A stand-in for `npx` used only by scripts/tests/update_common_skills_lock_test.sh.
+# Lives at scripts/tests/fake-bin/npx so the test can put it on PATH ahead of
+# the real npx just by prepending scripts/tests/fake-bin.
+# scripts/update_common_skills_lock invokes:
+#   npx --yes "skills@<version>" add <source> -a <agent> -s <selector> -y --copy
+# This fake models the parts of that call the test needs, without touching the
+# network or the real `skills` CLI:
+#   - FAKE_NPX_SOURCE_DIR points at a directory of "<skill-name>/SKILL.md"
+#     fixtures that stands in for the current state of the source repo.
+#     Every skill found there is copied into ./.agents/skills/<name>/ (as
+#     `--copy` would) and recorded in a freshly written ./skills-lock.json,
+#     keyed by skill name, with the same shape (source, sourceType,
+#     skillPath, computedHash) `skills add` produces for a github source.
+#   - FAKE_NPX_MODE overrides that default behavior to model a broken CLI
+#     run for the fail-closed test (see finding 1 in the PR): `broken-empty`
+#     exits 0 having done nothing at all; `broken-empty-lock` exits 0 having
+#     written a technically-valid lock with no skills and no copies.
+set -eo pipefail
+
+source_arg=""
+found_add=0
+for arg in "$@"; do
+  if [[ "${found_add}" -eq 1 ]]; then
+    source_arg="${arg}"
+    break
+  fi
+  if [[ "${arg}" == "add" ]]; then
+    found_add=1
+  fi
+done
+
+case "${FAKE_NPX_MODE:-}" in
+  broken-empty)
+    exit 0
+    ;;
+  broken-empty-lock)
+    printf '%s\n' '{"version":1,"skills":{}}' > ./skills-lock.json
+    exit 0
+    ;;
+  "")
+    ;;
+  *)
+    echo "fake npx: unknown FAKE_NPX_MODE: ${FAKE_NPX_MODE}" >&2
+    exit 1
+    ;;
+esac
+
+if [[ -z "${FAKE_NPX_SOURCE_DIR:-}" ]]; then
+  echo "fake npx: FAKE_NPX_SOURCE_DIR must be set" >&2
+  exit 1
+fi
+
+if [[ -z "${source_arg}" ]]; then
+  echo "fake npx: could not find the source argument to 'add' in: $*" >&2
+  exit 1
+fi
+
+mkdir -p ./.agents/skills
+
+for skill_dir in "${FAKE_NPX_SOURCE_DIR}"/*/; do
+  [[ -d "${skill_dir}" ]] || continue
+  name="$(basename "${skill_dir}")"
+  skill_file="${skill_dir}SKILL.md"
+  if [[ ! -f "${skill_file}" ]]; then
+    continue
+  fi
+  mkdir -p "./.agents/skills/${name}"
+  cp "${skill_file}" "./.agents/skills/${name}/SKILL.md"
+done
+
+node - "${source_arg}" <<'NODE'
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+
+const source = process.argv[2];
+const skillsDir = path.join(".", ".agents", "skills");
+const names = fs.existsSync(skillsDir)
+  ? fs
+      .readdirSync(skillsDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort()
+  : [];
+
+const skills = {};
+for (const name of names) {
+  const skillPath = `.agents/skills/${name}/SKILL.md`;
+  const content = fs.readFileSync(skillPath);
+  const computedHash = crypto.createHash("sha256").update(content).digest("hex");
+  skills[name] = {
+    source,
+    sourceType: "github",
+    skillPath,
+    computedHash,
+  };
+}
+
+fs.writeFileSync("./skills-lock.json", JSON.stringify({ version: 1, skills }, null, 2) + "\n");
+NODE

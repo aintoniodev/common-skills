@@ -82,9 +82,16 @@ fi
 
 trap cleanup EXIT
 TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/common-skills-lock.XXXXXX")"
-cp "${LOCK_FILE}" "${TEMP_DIR}/skills-lock.json"
+CANDIDATE_LOCK="${TEMP_DIR}/skills-lock.json"
 git -C "${TEMP_DIR}" init --quiet
 
+# Regenerate in a clean directory: do not seed it with the existing lock.
+# skills add merges into whatever lock it finds and never removes an entry
+# whose skill is no longer present in ${COMMON_SKILLS_SOURCE}, so seeding
+# from the existing lock is what let a rename or deletion upstream leave a
+# stale entry behind, pointing at a skillPath that no longer exists. A
+# clean directory has nothing to merge stale entries from: skills add can
+# only ever emit entries for skills it actually finds in the source.
 if ! (
   cd "${TEMP_DIR}"
   npx --yes "skills@${SKILLS_CLI_VERSION}" add "${COMMON_SKILLS_SOURCE}" -a "${SKILLS_CLI_AGENT}" -s "${COMMON_SKILL_SELECTOR}" -y --copy
@@ -93,53 +100,65 @@ if ! (
   exit 1
 fi
 
-if [[ ! -f "${TEMP_DIR}/skills-lock.json" ]]; then
+if [[ ! -f "${CANDIDATE_LOCK}" ]]; then
   echo "error: common skills update did not produce a candidate skills-lock.json." >&2
   exit 1
 fi
 
-# skills add merges into the seeded lock but never removes an entry whose
-# skill is no longer present in ${COMMON_SKILLS_SOURCE}: a rename or deletion
-# upstream otherwise leaves a stale entry pointing at a skillPath that no
-# longer exists. Reconcile: an entry from that source survives only if this
-# run's --copy actually materialized its skillPath under ${TEMP_DIR}. Entries
-# from any other source are left untouched. This reuses the copy skills add
-# already produced instead of making a second fetch.
-if ! node - "${TEMP_DIR}/skills-lock.json" "${TEMP_DIR}" "${COMMON_SKILLS_SOURCE}" <<'NODE'
+# Merge the freshly regenerated ${COMMON_SKILLS_SOURCE} entries with any
+# entries from other sources already in ${LOCK_FILE}; those are never
+# touched by the command above and are carried over unmodified. Fail
+# closed, rather than silently pruning, if the source produced no entries
+# at all while the existing lock has some: that is a sign this run didn't
+# actually discover or copy anything, not that every skill vanished
+# upstream, and writing that result would delete every locked skill.
+if ! node - "${LOCK_FILE}" "${CANDIDATE_LOCK}" "${COMMON_SKILLS_SOURCE}" <<'NODE'
 const fs = require("fs");
-const path = require("path");
 
-const lockFile = process.argv[2];
-const tempDir = process.argv[3];
+const existingLockFile = process.argv[2];
+const candidateLockFile = process.argv[3];
 const source = process.argv[4];
 
-const lock = JSON.parse(fs.readFileSync(lockFile, "utf8"));
-const skills = lock.skills || {};
-let changed = false;
+const existing = JSON.parse(fs.readFileSync(existingLockFile, "utf8"));
+const candidate = JSON.parse(fs.readFileSync(candidateLockFile, "utf8"));
+const existingSkills = existing.skills || {};
+const candidateSkills = candidate.skills || {};
 
-for (const [name, entry] of Object.entries(skills)) {
-  if (entry.source !== source || !entry.skillPath) {
-    continue;
-  }
-  if (!fs.existsSync(path.join(tempDir, entry.skillPath))) {
-    delete skills[name];
-    changed = true;
-  }
+const existingSourceCount = Object.values(existingSkills).filter((entry) => entry.source === source).length;
+const freshSourceEntries = Object.entries(candidateSkills).filter(([, entry]) => entry.source === source);
+
+if (existingSourceCount > 0 && freshSourceEntries.length === 0) {
+  console.error(`error: regenerating from ${source} produced no entries, but the existing lock has ${existingSourceCount}; refusing to prune all of them.`);
+  process.exit(1);
 }
 
-if (changed) {
-  fs.writeFileSync(lockFile, JSON.stringify(lock, null, 2) + "\n");
+const merged = {};
+for (const [name, entry] of Object.entries(existingSkills)) {
+  if (entry.source !== source) {
+    merged[name] = entry;
+  }
 }
+for (const [name, entry] of freshSourceEntries) {
+  merged[name] = entry;
+}
+
+const sortedSkills = {};
+for (const name of Object.keys(merged).sort()) {
+  sortedSkills[name] = merged[name];
+}
+
+const result = { ...candidate, skills: sortedSkills };
+fs.writeFileSync(candidateLockFile, JSON.stringify(result, null, 2) + "\n");
 NODE
 then
-  echo "error: failed to reconcile stale ${COMMON_SKILLS_SOURCE} entries in the candidate skills-lock.json." >&2
+  echo "error: failed to merge the regenerated ${COMMON_SKILLS_SOURCE} entries into skills-lock.json." >&2
   exit 1
 fi
 
-if cmp -s "${LOCK_FILE}" "${TEMP_DIR}/skills-lock.json"; then
+if cmp -s "${LOCK_FILE}" "${CANDIDATE_LOCK}"; then
   echo "skills-lock.json is already up to date."
   exit 0
 fi
 
-cp "${TEMP_DIR}/skills-lock.json" "${LOCK_FILE}"
+cp "${CANDIDATE_LOCK}" "${LOCK_FILE}"
 echo "Updated ${LOCK_FILE}."

@@ -5,6 +5,7 @@ These scripts help consuming repositories install, remove, and verify shared age
 - `install_common_skills`: installs or updates common skills, then verifies the installed contents.
 - `update_common_skills_lock`: regenerates an existing common-skills lockfile without installing skills.
 - `remove_common_skills`: removes installed common skills from a selected target.
+- `tests/`: regression tests for the scripts in this directory (currently `update_common_skills_lock`), run in CI.
 ## Quick start
 Install common skills into the current checkout:
 ```sh
@@ -94,13 +95,16 @@ Project installs add local Git exclude entries for only the locked common-skill 
 Global installs are shared across client repositories. A second repo pinned to the same lock verifies and succeeds without unnecessarily reinstalling; a repo pinned to a different lock fails with a version-mismatch error instead of overwriting the shared global install.
 ## Update lock script
 `update_common_skills_lock` non-interactively regenerates an existing `skills-lock.json` from the default branch of `warpdotdev/common-skills` without installing skills into the target repository.
-It generates a candidate in a temporary Git repository, then reconciles it before copying back only a changed `skills-lock.json`. Generator failures and missing candidate output fail the command instead of retaining the existing lock.
-The `skills` CLI merges into whatever lock it finds and never removes an entry for a skill that disappeared from the source, so a renamed or deleted skill would otherwise leave a stale entry behind. The script reconciles this: an entry whose `source` is `warpdotdev/common-skills` is dropped unless the same run's `--copy` materialized its `skillPath` under the temporary directory. Entries from any other `source`, including hand-added ones, are left untouched.
+It regenerates the `warpdotdev/common-skills` portion of the lock from scratch in a clean, unseeded temporary directory, merges in any entries from other sources unchanged, and only then copies back a changed `skills-lock.json`. Generator failures and missing candidate output fail the command instead of retaining the existing lock.
+The `skills` CLI merges into whatever lock it finds and never removes an entry for a skill that disappeared from the source, so seeding the temporary directory with the existing lock (as an earlier version of this script did) let a renamed or deleted skill leave a stale entry behind. Regenerating in a clean directory removes that failure mode structurally: `skills add` can only ever emit entries for skills it actually finds in the source, so nothing stale can survive the merge. Entries whose `source` is not `warpdotdev/common-skills`, including hand-added ones, are always carried over from the existing lock untouched.
+The script also fails closed: if regenerating produces no `warpdotdev/common-skills` entries at all while the existing lock has some, it aborts with a non-zero exit and leaves `skills-lock.json` untouched, rather than writing a lock that silently dropped every locked skill.
 Run it from a consuming repository:
 ```sh
 /path/to/common-skills/scripts/update_common_skills_lock --repo-root /path/to/consumer
 ```
 The downstream lockfile update workflow uses this command before opening lockfile-only pull requests.
+### Tests
+`scripts/tests/update_common_skills_lock_test.sh` is a self-contained regression suite for this script. It runs the real script against `scripts/tests/fake-bin/npx`, a fake `npx` that deterministically models `skills add ... --copy` from a local fixture directory instead of the network, and covers a rename, a plain deletion, foreign-source preservation, idempotence (a second run is byte-identical and reports up to date), and the fail-closed guard above. `.github/workflows/test-scripts.yml` runs it on every push to `main` and on every pull request.
 ## Downstream lockfile workflow
 `.github/workflows/update-downstream-skill-locks.yml` runs after every push to `main` and opens lockfile-only pull requests against `warpdotdev/warp` and `warpdotdev/warp-server` when their locks change.
 Each pull request requests the author of the originating common-skills pull request when possible and enables squash auto-merge. Direct pushes and authors who cannot review a target repository do not prevent pull request creation.
