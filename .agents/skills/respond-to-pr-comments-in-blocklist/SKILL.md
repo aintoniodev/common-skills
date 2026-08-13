@@ -1,9 +1,9 @@
 ---
-name: respond-to-pr-comments
+name: respond-to-pr-comments-in-blocklist
 description: Interactively walk a user through PR review comments one at a time, collect a per-comment decision, then post agent-authored replies on GitHub and resolve the review threads once the user approves a preview. Use only when the user wants to reply to or resolve review threads on GitHub. Skip when the user only wants comments fetched or displayed (use `pr-comments`), or only wants the code changes made without posting anything back to GitHub.
 ---
 
-# Respond to PR comments
+# Respond to PR comments in blocklist
 
 Use this skill to respond to PR comments on the current branch. If comments are already visible in the conversation, typically from the built-in `/pr-comments` skill, continue from that context. If comments are not already visible, fetch and display them first, then guide the user through each actionable comment, collect an explicit decision, make requested code changes, and only then ask for approval before posting GitHub replies or resolving review threads.
 
