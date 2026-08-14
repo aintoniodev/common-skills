@@ -164,10 +164,15 @@ def configuration_is_ready() -> bool:
     )
 
 
+def is_valid_webhook_url(webhook_url: str) -> bool:
+    """Return whether the URL is an HTTPS hooks.slack.com endpoint."""
+    parsed = urllib.parse.urlparse(webhook_url)
+    return parsed.scheme == "https" and parsed.hostname == "hooks.slack.com"
+
+
 def validate_webhook_url(webhook_url: str, source: str) -> str:
     """Return the URL only when it is an HTTPS hooks.slack.com endpoint."""
-    parsed = urllib.parse.urlparse(webhook_url)
-    if parsed.scheme != "https" or parsed.hostname != "hooks.slack.com":
+    if not is_valid_webhook_url(webhook_url):
         raise SubmissionError(
             f"The {source} did not contain an HTTPS hooks.slack.com URL."
         )
@@ -175,20 +180,19 @@ def validate_webhook_url(webhook_url: str, source: str) -> str:
 
 
 def read_webhook_url_from_env() -> str | None:
-    """Return a validated webhook URL from the managed-secret env var, if present.
+    """Return a valid webhook URL from the managed-secret env var, if any.
 
     Cloud agents receive the webhook as an Oz managed secret injected under this
-    environment variable; a missing or empty value means fall back to gcloud.
+    environment variable. A missing, empty, or invalid value yields None so that
+    resolution falls through to the gcloud lookup unchanged.
     """
     raw_value = os.environ.get(WEBHOOK_URL_ENV_VAR)
     if raw_value is None:
         return None
     webhook_url = raw_value.strip()
-    if not webhook_url:
+    if not webhook_url or not is_valid_webhook_url(webhook_url):
         return None
-    return validate_webhook_url(
-        webhook_url, f"{WEBHOOK_URL_ENV_VAR} environment variable"
-    )
+    return webhook_url
 
 
 def read_webhook_url() -> str:
