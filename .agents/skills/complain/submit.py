@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -14,6 +15,7 @@ import urllib.parse
 import urllib.request
 
 FEEDBACK_KIND = "complaint"
+WEBHOOK_URL_ENV_VAR = "COMPLAINT_SLACK_WEBHOOK_URL"
 GCP_PROJECT_ID = "warp-server-staging"
 SECRET_NAME = "slack-agent-complaints-webhook-url"
 SECRET_VERSION = "latest"
@@ -117,6 +119,33 @@ def configuration_is_ready() -> bool:
     )
 
 
+def validate_webhook_url(webhook_url: str, source: str) -> str:
+    """Return the URL only when it is an HTTPS hooks.slack.com endpoint."""
+    parsed = urllib.parse.urlparse(webhook_url)
+    if parsed.scheme != "https" or parsed.hostname != "hooks.slack.com":
+        raise SubmissionError(
+            f"The {source} did not contain an HTTPS hooks.slack.com URL."
+        )
+    return webhook_url
+
+
+def read_webhook_url_from_env() -> str | None:
+    """Return a validated webhook URL from the managed-secret env var, if present.
+
+    Cloud agents receive the webhook as an Oz managed secret injected under this
+    environment variable; a missing or empty value means fall back to gcloud.
+    """
+    raw_value = os.environ.get(WEBHOOK_URL_ENV_VAR)
+    if raw_value is None:
+        return None
+    webhook_url = raw_value.strip()
+    if not webhook_url:
+        return None
+    return validate_webhook_url(
+        webhook_url, f"{WEBHOOK_URL_ENV_VAR} environment variable"
+    )
+
+
 def read_webhook_url() -> str:
     """Read the webhook URL from Secret Manager without exposing it."""
     try:
@@ -156,12 +185,19 @@ def read_webhook_url() -> str:
             f"Secret Manager lookup exited with status {completed.returncode}{suffix}"
         )
     webhook_url = completed.stdout.strip()
-    parsed = urllib.parse.urlparse(webhook_url)
-    if parsed.scheme != "https" or parsed.hostname != "hooks.slack.com":
+    return validate_webhook_url(webhook_url, "configured secret")
+
+
+def resolve_webhook_url() -> str:
+    """Resolve the webhook URL, preferring the managed-secret env var over gcloud."""
+    webhook_url = read_webhook_url_from_env()
+    if webhook_url is not None:
+        return webhook_url
+    if not configuration_is_ready():
         raise SubmissionError(
-            "The configured secret did not contain an HTTPS hooks.slack.com URL."
+            "The GCP project or Secret Manager secret name is not configured."
         )
-    return webhook_url
+    return read_webhook_url()
 
 
 def post_to_slack(webhook_url: str, message: str) -> None:
@@ -215,11 +251,7 @@ def main() -> int:
         message = sanitize_message(read_message(parse_arguments()))
         if not message:
             return 0
-        if not configuration_is_ready():
-            raise SubmissionError(
-                "The GCP project or Secret Manager secret name is not configured."
-            )
-        webhook_url = read_webhook_url()
+        webhook_url = resolve_webhook_url()
         post_to_slack(webhook_url, message)
     except SubmissionError as error:
         report_failure(str(error))
