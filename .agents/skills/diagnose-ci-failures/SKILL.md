@@ -22,7 +22,7 @@ Get the current branch and check if a PR exists:
 git branch --show-current
 
 # Check for PR
-gh --no-pager pr view <branch-name> --json number,title,url,state
+GH_PAGER=cat gh pr view <branch-name> --json number,title,url,state
 ```
 
 If no PR exists, inform the user and offer to create one using the `create-pr` skill.
@@ -32,7 +32,7 @@ If no PR exists, inform the user and offer to create one using the `create-pr` s
 Fetch the status of all CI checks:
 
 ```bash
-gh pr view <branch-name> --json statusCheckRollup
+GH_PAGER=cat gh pr view <branch-name> --json statusCheckRollup
 ```
 
 Parse the output to identify:
@@ -47,7 +47,7 @@ If CI is still running, inform the user which checks have already failed or pass
 For each failed check, pull the logs using the run ID from the status check:
 
 ```bash
-gh run view <run-id> --log-failed
+GH_PAGER=cat gh run view <run-id> --log-failed
 ```
 
 Focus on extracting:
@@ -78,6 +78,7 @@ The plan should reference the `fix-errors` skill for detailed guidance on resolv
 
 ## Important Notes
 
+- **GitHub CLI paging**: Set `GH_PAGER=cat` on every `gh` invocation. The GitHub CLI does not support `--no-pager` as a global option; `GH_PAGER` and `PAGER` are its documented paging controls
 - **Always create a plan first**: Never make code changes directly. Generate a plan for user review
 - **Check test status in CI**: Even if tests fail locally, verify they passed in CI before flagging as issues
 - **Unrelated test failures**: If tests passed in CI but fail locally, they may be environment-specific or flaky
@@ -98,15 +99,15 @@ The plan should reference the `fix-errors` skill for detailed guidance on resolv
 
 **Get PR status with details:**
 ```bash
-gh --no-pager pr view --json number,title,state,statusCheckRollup
+GH_PAGER=cat gh pr view --json number,title,state,statusCheckRollup
 ```
 
 **Get logs from specific failed run:**
 ```bash
-gh run view 12345678 --log-failed
+GH_PAGER=cat gh run view 12345678 --log-failed
 ```
 
 **Check for specific error in logs:**
 ```bash
-gh run view 12345678 --log-failed 2>&1 | grep -A 5 "error:"
+GH_PAGER=cat gh run view 12345678 --log-failed 2>&1 | grep -A 5 "error:"
 ```
