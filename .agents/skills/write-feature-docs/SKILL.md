@@ -1,6 +1,6 @@
 ---
 name: write-feature-docs
-description: Draft a complete documentation page for a new Warp feature from its PRODUCT.md and/or TECH.md spec. Use when an engineer has written a spec and needs to produce a first-pass MDX draft for the warpdotdev/docs repo. Also handles features without specs by researching the codebase first. Invoke this skill whenever an engineer mentions writing docs for a feature, drafting a docs page, creating feature documentation, starting the eng-docs workflow, or converting a spec into documentation. Works from warp-internal or warp-server.
+description: Draft a complete documentation page for a new Warp feature from its PRODUCT.md and/or TECH.md spec. Use when an engineer has written a spec and needs to produce a first-pass MDX draft for the warpdotdev/docs repo. Also handles features without specs by researching the codebase first. Invoke this skill whenever an engineer mentions writing docs for a feature, drafting a docs page, creating feature documentation, or converting a spec into documentation. Requires an interactive session with the engineer present - it confirms an outline before drafting and cannot run unattended. For automated, release-triggered docs, use the missing_docs skill in warpdotdev/docs instead. Works from warp-internal or warp-server.
 ---
 
 # write-feature-docs
@@ -33,7 +33,9 @@ Look for the spec files at:
 
 Read both files if both exist. `PRODUCT.md` is the primary driver for the docs content.
 
-**When reading `TECH.md`:** *(Interactive mode only — in ambient mode, treat all TECH.md-derived content as internal without review; see [Ambient mode](#ambient-mode-called-by-scan-new-specs).)* Before incorporating anything from it, identify content that looks like internal implementation detail — database schema, internal service names, private API endpoints, confidential server architecture. Present these flagged items to the engineer and ask them to confirm what's safe to include in public docs and what should stay internal. Do not include anything marked confidential in the draft.
+**When reading `TECH.md`:** Before incorporating anything from it, identify content that looks like internal implementation detail — database schema, internal service names, private API endpoints, confidential server architecture. Present these flagged items to the engineer and ask them to confirm what's safe to include in public docs and what should stay internal. Do not include anything marked confidential in the draft.
+
+This confirmation is why the skill requires a present engineer. There is no unattended path: without someone to say what is safe to publish, `TECH.md` content cannot be drafted at all.
 
 If neither file exists, skip to [No-spec fallback](#no-spec-fallback).
 
@@ -51,7 +53,7 @@ Things to verify from code:
 - **Related features**: identify other features that cross-reference this one for "Related pages"
 - **Engineer to tag**: identify the GitHub handle of the engineer who owns the spec.
   - *Interactive mode*: run `gh api user --jq .login` to get the handle of the person currently running the skill — use this only when the skill is being invoked directly by the spec engineer. If a docs team member or non-author is running the skill, use the discovery steps below instead.
-  - *Ambient mode and non-author interactive runs*: before running any lookup commands, validate that the spec ID contains only alphanumeric characters and hyphens (matching `^[A-Za-z0-9][A-Za-z0-9-]*$`). If the spec ID contains any other characters, skip the lookup entirely and use `[TODO: tag spec author]` as a placeholder. If the spec ID is valid, assign it to `SPEC_ID` and work through these steps in order, stopping as soon as a handle is found:
+  - *Non-author runs (a docs team member or anyone who did not write the spec)*: before running any lookup commands, validate that the spec ID contains only alphanumeric characters and hyphens (matching `^[A-Za-z0-9][A-Za-z0-9-]*$`). If the spec ID contains any other characters, skip the lookup entirely and use `[TODO: tag spec author]` as a placeholder. If the spec ID is valid, assign it to `SPEC_ID` and work through these steps in order, stopping as soon as a handle is found:
     1. **Check `Co-authored-by:` trailers in the commit message** — in repos that mirror from a private source (like `warp-internal`), the sync bot is the commit author but the real author appears in a `Co-authored-by:` trailer. Extract the first non-bot entry:
        ```bash
        git log --follow -1 --format="%B" -- "specs/${SPEC_ID}/PRODUCT.md" \
@@ -358,7 +360,14 @@ Do **not** add a screenshot for every step in a procedure. Only add one where th
 
 ## Step 5: Open the draft PR
 
-After generating the draft, submit it to `warpdotdev/docs` automatically:
+**Before opening the PR, confirm the docs repo's own requirements are met.** `warpdotdev/docs` gates incoming pages on two things, and a PR that skips them will be sent back:
+
+1. **The change passes `.agents/references/docs-worthiness-criteria.md`** in the docs repo. The default is no docs. If the feature is not yet GA, or the only honest justification is "it's new," do not open a PR — tell the engineer why and stop. This is worth checking even though an engineer asked for the page: the most common failure is drafting for something that has not shipped.
+2. **A content design plan** per `.agents/references/content-design-plan.md`, included in the PR body as a `## Content design plan` section. The outline you confirmed in Step 3 is not a substitute — the plan records audience and JTBD, the problem, goals, and which scenarios are deliberately excluded.
+
+Prefer updating an existing page over creating a new one whenever a page already covers the surface.
+
+After generating the draft, submit it to `warpdotdev/docs`:
 
 1. Clone `warpdotdev/docs` to a temp directory (or use the local clone if available)
 2. Write the MDX file to `src/content/docs/<proposed-section>/<filename>.mdx`
@@ -405,40 +414,18 @@ Build the outline from your research and the engineer's targeted answers, then p
 
 ---
 
-## Ambient mode (called by scan-new-specs)
+## Interactive only — there is no unattended mode
 
-When this skill is invoked by `scan-new-specs` rather than an engineer directly, it runs in **ambient mode** — there is no interactive terminal session, so the outline confirmation step must be handled differently.
+This skill previously had an "ambient mode" that let `scan-new-specs` drive it headlessly, skipping the outline confirmation in Step 3 and embedding the outline in the PR description as a checklist instead. **That mode is removed, and `scan-new-specs` is retired.**
 
-In ambient mode:
+It produced draft PRs for features that had not shipped, because a merged spec is not a shipped feature and no unattended run could tell the difference. Skipping outline confirmation also removed the one checkpoint where a human could redirect the draft before the prose was written.
 
-1. Complete Steps 1 and 2 (read spec, research codebase) as normal
-2. **Skip the interactive outline confirmation.** Instead, embed the outline directly in the PR description as a checklist:
+Do not re-add an unattended path here:
 
-```markdown
-## Docs outline (auto-generated)
+- **For automated, release-triggered docs**, use `missing_docs` in the `warpdotdev/docs` repo. It gates every candidate on `.agents/references/docs-worthiness-criteria.md` before drafting and only runs when a new stable release has shipped.
+- **For an engineer who wants docs for their feature**, this skill is the right tool — invoked directly, with the engineer present to confirm the outline and the `TECH.md` boundary.
 
-The following outline was generated from the spec. **<engineer-review-request>: please review and check off each item, or leave a comment with corrections.** Use `@<engineer-handle>` when a valid handle was found; otherwise use `[TODO: tag spec author]` without an `@` prefix.
-
-### Content structure
-- [ ] H1: `<feature name>`
-- [ ] Opening paragraph describes: [your 1-sentence summary]
-- [ ] Key features section covers: [which capabilities]
-- [ ] How it works section covers: [the conceptual model]
-- [ ] `## <Usage section>` with steps: [numbered list]
-- [ ] Related pages: [suggested cross-links]
-
-### Items needing engineer verification ⚠️
-- [ ] [UNVERIFIED item 1 — e.g. "Does this trigger automatically or require manual action?"]
-- [ ] [UNVERIFIED item 2]
-
-### Verified from codebase ✅
-- [What was confirmed, e.g. "Feature flag: `my_feature` in warp-internal"]
-```
-
-3. Generate the full MDX draft (Step 4) with this constraint: **do not draft any content derived from `TECH.md` in ambient mode.** There is no engineer present to confirm what is confidential, so any detail that came exclusively from `TECH.md` (implementation internals, data model, server architecture, private API details) must be replaced with `[TODO: engineer to verify — pulled from TECH.md, confirm this is safe to publish]`. Only `PRODUCT.md` content and codebase-verified facts are safe to draft without confirmation.
-4. **Attempt screenshots** (Step 4.5) — if computer use is available, run the predict-then-verify capture protocol for any screenshot placeholders. Include any screenshots that pass the quality gate in the draft.
-5. Open the draft PR (Step 5) as normal — substitute the engineer handle found in Step 2 for `<engineer-handle>` in the outline checklist before embedding it in the PR description
-6. Do not post any interactive messages to the terminal; all output should go into the PR
+If you are running without an interactive session, stop and report that this skill requires one, rather than drafting anyway.
 
 ---
 
@@ -446,4 +433,5 @@ The following outline was generated from the spec. **<engineer-review-request>: 
 
 - `write-product-spec` — produces the `PRODUCT.md` this skill reads
 - `write-tech-spec` — produces the `TECH.md` this skill reads
-- `scan-new-specs` — the scheduled agent that invokes this skill in ambient mode
+- `missing_docs` (in `warpdotdev/docs`) — the release-triggered, worthiness-gated pipeline for docs on newly shipped features
+- `scan-new-specs` — retired; see its deprecation notice
