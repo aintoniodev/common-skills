@@ -362,7 +362,9 @@ Do **not** add a screenshot for every step in a procedure. Only add one where th
 
 **Before opening the PR, confirm the docs repo's own requirements are met.** `warpdotdev/docs` gates incoming pages on two things, and a PR that skips them will be sent back:
 
-1. **The change passes `.agents/references/docs-worthiness-criteria.md`** in the docs repo. The default is no docs. If the feature is not yet GA, or the only honest justification is "it's new," do not open a PR — tell the engineer why and stop. This is worth checking even though an engineer asked for the page: the most common failure is drafting for something that has not shipped.
+1. **Gate 0 of `.agents/references/docs-worthiness-criteria.md`** in the docs repo: is the feature shipped and GA, on a public surface? If not, do not open a PR — tell the engineer why and stop. This is worth checking even though the engineer asked for the page, because drafting for something that has not shipped yet is the most common failure, and an engineer close to the work can easily be a release ahead of their users.
+
+   The remaining gates in that reference are judgment calls about whether a change warrants docs. They govern the automated pipeline, not you — an engineer asking for docs on their own shipped feature has context the gate cannot see. Do not decline on those grounds.
 2. **A content design plan** per `.agents/references/content-design-plan.md`, included in the PR body as a `## Content design plan` section. The outline you confirmed in Step 3 is not a substitute — the plan records audience and JTBD, the problem, goals, and which scenarios are deliberately excluded.
 
 Prefer updating an existing page over creating a new one whenever a page already covers the surface.
