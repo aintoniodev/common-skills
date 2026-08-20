@@ -13,7 +13,7 @@ The engineer's job is to confirm what you couldn't verify from the spec and code
 
 1. Find and read the spec files
 2. Research the codebase to verify technical claims — minimize what the engineer needs to check
-3. Generate a concise outline and wait for engineer confirmation
+3. Generate a content design plan and a concise outline, and wait for engineer confirmation
 4. Generate the complete MDX draft
 4.5. Attempt screenshot capture via computer use (if available)
 5. Open a draft PR in `warpdotdev/docs` and tag the docs team
@@ -86,7 +86,7 @@ For each claim you verify from code, mark it confirmed. For claims you can't ver
 
 ---
 
-## Step 3: Generate and present the outline
+## Step 3: Generate and present the content design plan and outline
 
 Generate a concise outline — no prose. The outline shows what you've confirmed from research and exactly what still needs engineer input.
 
@@ -130,6 +130,17 @@ NEEDS YOUR CONFIRMATION ⚠️
 After printing the outline, say:
 
 > "I've verified what I could from the codebase. Please check the items marked ⚠️ above and reply with any corrections, or say 'looks good' to proceed."
+
+### Present the content design plan alongside it
+
+Fill in `.agents/templates/content-design-plan.md` from the docs repo and present it with the outline, in the same message. Use `.agents/references/content-design-plan.md` for what each field is asking.
+
+The two answer different questions, and the engineer should confirm both at once:
+
+- The **outline** says what sections the page will have.
+- The **plan** says who the page is for, what job they are doing, and which scenarios it deliberately leaves out.
+
+This is the cheapest moment to redirect either one, because no prose exists yet. Once the draft is written, changing the audience means rewriting it. Carry the confirmed plan into the PR body in Step 5.
 
 Wait for the engineer's reply before continuing. Incorporate their feedback, then draft.
 
@@ -365,7 +376,7 @@ Do **not** add a screenshot for every step in a procedure. Only add one where th
 1. **Gate 0 of `.agents/references/docs-worthiness-criteria.md`** in the docs repo: is the feature shipped and GA, on a public surface? If not, do not open a PR — tell the engineer why and stop. This is worth checking even though the engineer asked for the page, because drafting for something that has not shipped yet is the most common failure, and an engineer close to the work can easily be a release ahead of their users.
 
    The remaining gates in that reference are judgment calls about whether a change warrants docs. They govern the automated pipeline, not you — an engineer asking for docs on their own shipped feature has context the gate cannot see. Do not decline on those grounds.
-2. **A content design plan** per `.agents/references/content-design-plan.md`, included in the PR body as a `## Content design plan` section. The outline you confirmed in Step 3 is not a substitute — the plan records audience and JTBD, the problem, goals, and which scenarios are deliberately excluded.
+2. **The content design plan** the engineer confirmed in Step 3, included in the PR body as a `## Content design plan` section.
 
 Prefer updating an existing page over creating a new one whenever a page already covers the surface.
 
