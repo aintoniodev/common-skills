@@ -1,11 +1,11 @@
 ---
 name: write-feature-docs
-description: Draft a complete documentation page for a new Warp feature from its PRODUCT.md and/or TECH.md spec. Use when an engineer has written a spec and needs to produce a first-pass MDX draft for the warpdotdev/docs repo. Also handles features without specs by researching the codebase first. Invoke this skill whenever an engineer mentions writing docs for a feature, drafting a docs page, creating feature documentation, or converting a spec into documentation. Requires an interactive session with the engineer present - it confirms an outline before drafting and cannot run unattended. For automated, release-triggered docs, use the missing_docs skill in warpdotdev/docs instead. Works from warp-internal or warp-server.
+description: Draft a complete documentation page for a new Warp feature from its PRODUCT.md and/or TECH.md spec. Use when an engineer has written a spec and needs to produce a first-pass MDX draft for the warpdotdev/docs repo. Also handles features without specs by researching the codebase first. Invoke this skill whenever an engineer mentions writing docs for a feature, drafting a docs page, creating feature documentation, or converting a spec into documentation. Requires an interactive session with the engineer present - it confirms a content design plan, then an outline, before drafting, and cannot run unattended. For automated, release-triggered docs, use the missing_docs skill in warpdotdev/docs instead. Works from warp-internal or warp-server.
 ---
 
 # write-feature-docs
 
-Draft a complete documentation page for a new Warp feature. You read the feature's spec, verify technical claims by researching the codebase yourself, present a concise outline for the engineer to confirm, then produce a complete MDX draft and open a draft PR in `warpdotdev/docs` — tagging the docs team for review.
+Draft a complete documentation page for a new Warp feature. You read the feature's spec, verify technical claims by researching the codebase yourself, confirm the content design plan and then the outline with the engineer, and only then produce a complete MDX draft and open a draft PR in `warpdotdev/docs` — tagging the docs team for review.
 
 The engineer's job is to confirm what you couldn't verify from the spec and code — not to do a full accuracy review, not to polish prose, not to know docs conventions.
 
@@ -13,10 +13,13 @@ The engineer's job is to confirm what you couldn't verify from the spec and code
 
 1. Find and read the spec files
 2. Research the codebase to verify technical claims — minimize what the engineer needs to check
-3. Generate a content design plan and a concise outline, and wait for engineer confirmation
-4. Generate the complete MDX draft
-4.5. Attempt screenshot capture via computer use (if available)
-5. Open a draft PR in `warpdotdev/docs` and tag the docs team
+3. Present the content design plan and wait for confirmation — who the page is for
+4. Present the outline and wait for confirmation — what the page will contain
+5. Generate the complete MDX draft
+5.5. Attempt screenshot capture via computer use (if available)
+6. Open a draft PR in `warpdotdev/docs` and tag the docs team
+
+Steps 3 and 4 are **two separate confirmations, in that order.** The outline is derived from the plan — the plan picks the content type, and the content type determines what sections the outline has. Presenting them together would show the engineer an outline built on an audience they have not agreed to yet, and they would anchor on the concrete outline instead of reconsidering the question above it. Settle who the page is for, then decide what goes in it.
 
 ---
 
@@ -43,7 +46,7 @@ If neither file exists, skip to [No-spec fallback](#no-spec-fallback).
 
 ## Step 2: Research the codebase
 
-Before presenting the outline, use the GitHub CLI to verify as much technical content as possible yourself — reducing what the engineer needs to confirm to only what you genuinely cannot determine from the code.
+Before presenting the plan or the outline, use the GitHub CLI to verify as much technical content as possible yourself — reducing what the engineer needs to confirm to only what you genuinely cannot determine from the code.
 
 Things to verify from code:
 - **Feature flag name**: search for a safe feature token from the spec title or ticket. Before any shell use, reduce it to an allowlisted token matching `^[A-Za-z0-9][A-Za-z0-9_-]*$` and skip the shell search if you cannot produce one safely; then run `FEATURE_TOKEN="<validated-token>" && gh search code "${FEATURE_TOKEN}" --repo warpdotdev/warp-internal`.
@@ -86,9 +89,25 @@ For each claim you verify from code, mark it confirmed. For claims you can't ver
 
 ---
 
-## Step 3: Generate and present the content design plan and outline
+## Step 3: Present the content design plan and wait
 
-Generate a concise outline — no prose. The outline shows what you've confirmed from research and exactly what still needs engineer input.
+**This is the first of two confirmations, and it comes before the outline.** Settle who the page is for before deciding what goes in it.
+
+Fill in `.agents/templates/content-design-plan.md` from the docs repo, using `.agents/references/content-design-plan.md` for what each field is asking: audience and JTBD, problem, goals, purpose and value, content type, skill and template, and high-impact scenarios with explicit exclusions.
+
+Print it to the terminal, then say:
+
+> "Before I outline the page, please confirm this is the right reader and the right job. Correct anything that's off, or say 'looks good' and I'll draft the outline."
+
+**Wait for the engineer's reply.** Do not produce the outline in the same message. The plan decides the content type, and the content type decides what sections the outline has — an outline shown alongside an unconfirmed plan invites the engineer to anchor on the concrete sections in front of them rather than question the audience above them.
+
+If they change the audience, the content type, or the scope, revise the plan and re-confirm before moving on. Carry the confirmed plan into the PR body in Step 6.
+
+---
+
+## Step 4: Present the outline and wait
+
+Generate a concise outline — no prose — built on the **confirmed** plan from Step 3. The outline shows what you've confirmed from research and exactly what still needs engineer input.
 
 Print the outline to the terminal in this format:
 
@@ -101,7 +120,7 @@ PROPOSED PLACEMENT
   URL:      docs.warp.dev/<path>/<feature-name>
 
 CONTENT SECTIONS
-  H1:  <Feature name>
+  title:  <Feature name>   (frontmatter; Starlight renders it as the H1)
   Opening paragraph: [1-sentence description of what you'll write]
   ## Key features — [which 2-4 capabilities to highlight as bullets]
   ## How it works — [the conceptual model: what and why, no steps]
@@ -131,35 +150,29 @@ After printing the outline, say:
 
 > "I've verified what I could from the codebase. Please check the items marked ⚠️ above and reply with any corrections, or say 'looks good' to proceed."
 
-### Present the content design plan alongside it
-
-Fill in `.agents/templates/content-design-plan.md` from the docs repo and present it with the outline, in the same message. Use `.agents/references/content-design-plan.md` for what each field is asking.
-
-The two answer different questions, and the engineer should confirm both at once:
-
-- The **outline** says what sections the page will have.
-- The **plan** says who the page is for, what job they are doing, and which scenarios it deliberately leaves out.
-
-This is the cheapest moment to redirect either one, because no prose exists yet. Once the draft is written, changing the audience means rewriting it. Carry the confirmed plan into the PR body in Step 5.
-
 Wait for the engineer's reply before continuing. Incorporate their feedback, then draft.
+
+If their feedback contradicts the plan confirmed in Step 3 — a different reader, a different content type — revise the plan too rather than letting the two drift apart. The plan travels into the PR body, so a stale one misleads the reviewer.
 
 ---
 
-## Step 4: Generate the MDX draft
+## Step 5: Generate the MDX draft
 
 Generate a complete `.mdx` file based on the confirmed outline. The output is ready to drop directly into `warpdotdev/docs`.
 
 ### Template structure
 
+**Use the canonical template for the content type the plan chose**, from `.agents/templates/` in the docs repo — `feature-doc.md`, `conceptual.md`, `procedural.md`, `reference.md`, `troubleshooting.md`, `quickstart.md`, or `guide-page.md`. Those are the source of truth and they carry their own field-by-field guidance. The sketch below shows the shape of the most common one, feature documentation, so you know what to expect; it is not a substitute for reading the real template.
+
+Two rules the templates enforce that are easy to get wrong from memory: the page title goes in **frontmatter**, not a body H1 (Starlight renders the frontmatter title as the H1, so a body H1 duplicates it), and every bracketed instruction must be deleted before the page ships.
+
 ```mdx
 ---
+title: [Feature name — sentence case]
 description: >-
   [1-2 sentence standalone summary. Lead with the user benefit. Include the
   feature name and a key term or two so it works as a search result snippet.]
 ---
-
-# [Feature name]
 
 [Opening paragraph: what the feature does and its primary benefit.
 1-3 sentences. Lead with what the user can accomplish, not the implementation.]
@@ -247,7 +260,7 @@ These conventions come from the Warp docs style guide and must be followed:
 
 ---
 
-## Step 4.5: Capture screenshots via computer use (if available)
+## Step 5.5: Capture screenshots via computer use (if available)
 
 After generating the draft, attempt to capture screenshots for any `[TODO: docs reviewer — screenshot needed]` placeholders using computer use. This step is **optional** — only run it if the `computer_use` tool is available. If computer use is unavailable, leave all placeholders as-is.
 
@@ -369,7 +382,7 @@ Do **not** add a screenshot for every step in a procedure. Only add one where th
 
 ---
 
-## Step 5: Open the draft PR
+## Step 6: Open the draft PR
 
 **Before opening the PR, confirm the docs repo's own requirements are met.** `warpdotdev/docs` gates incoming pages on two things, and a PR that skips them will be sent back:
 
@@ -423,13 +436,13 @@ If `specs/<id>/PRODUCT.md` and `specs/<id>/TECH.md` don't exist, research the co
 
 **After research,** build as complete a picture as possible, then use `ask_user_question` only for specific gaps you couldn't fill from the code — not as a broad interview. Frame the questions concretely: "I found the feature in `app/src/ai/`. Based on the code, here's what I understand: [summary]. I couldn't determine these two things: [specific questions]."
 
-Build the outline from your research and the engineer's targeted answers, then proceed to Step 3 (outline confirmation) before drafting.
+Build the plan and outline from your research and the engineer's targeted answers, then work through Step 3 (plan confirmation) and Step 4 (outline confirmation) before drafting.
 
 ---
 
 ## Interactive only — there is no unattended mode
 
-This skill previously had an "ambient mode" that let `scan-new-specs` drive it headlessly, skipping the outline confirmation in Step 3 and embedding the outline in the PR description as a checklist instead. **That mode is removed, and `scan-new-specs` is retired.**
+This skill previously had an "ambient mode" that let `scan-new-specs` drive it headlessly, skipping the confirmations in Steps 3 and 4 and embedding the outline in the PR description as a checklist instead. **That mode is removed, and `scan-new-specs` is retired.**
 
 It produced draft PRs for features that had not shipped, because a merged spec is not a shipped feature and no unattended run could tell the difference. Skipping outline confirmation also removed the one checkpoint where a human could redirect the draft before the prose was written.
 
