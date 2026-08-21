@@ -47,6 +47,7 @@ Each skill lives in its own directory under `.agents/skills/`. The only required
 ### Skill authoring
 
 - `update-skill` — guidance for creating and maintaining skill directories and `SKILL.md` files.
+- `skill-doctor` — grades a repo's installed skills by scoring recent local agent conversations, then drafts the skill edits the evidence justifies.
 
 ## Adding a shared skill
 
