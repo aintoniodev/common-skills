@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Collect local Codex and Warp sessions and skills for scoring.
+"""Collect local Claude Code, Codex, and Warp sessions and skills for scoring.
 
-Scans Codex rollout files and/or Warp's local conversation databases,
-discovers installed skills, detects which sessions used which skills, and
-emits:
+Scans Claude Code project history, Codex rollout files, and/or Warp's local
+conversation databases, discovers installed skills, detects which sessions
+used which skills, and emits:
 
   <out>/inventory.json        - skills, per-session stats, sampling decisions
   <out>/transcripts/<id>.md   - condensed transcripts for sampled sessions
@@ -32,15 +32,21 @@ TRANSCRIPT_HEAD = 100
 TRANSCRIPT_TAIL = 40
 
 CODE_EDIT_HINTS = ("apply_patch", "*** Begin Patch", "edit_file", "create_file", "str_replace", "write_file")
+CLAUDE_CODE_EDIT_TOOLS = {"Edit", "MultiEdit", "NotebookEdit", "Write"}
 
 
 def parse_args():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
         "--harness",
-        choices=("auto", "all", "codex", "warp"),
+        choices=("auto", "all", "claude", "codex", "warp"),
         default="auto",
         help="session source (default: auto; scans every locally available source)",
+    )
+    p.add_argument(
+        "--claude-home",
+        default=os.environ.get("CLAUDE_CONFIG_DIR", "~/.claude"),
+        help="Claude Code config directory (default: CLAUDE_CONFIG_DIR or ~/.claude)",
     )
     p.add_argument("--codex-home", default=os.environ.get("CODEX_HOME", "~/.codex"))
     p.add_argument(
@@ -138,6 +144,28 @@ def find_codex_session_files(codex_home: Path, cutoff: datetime):
     return files
 
 
+def find_claude_session_files(claude_home: Path, cutoff: datetime, include_subagents: bool):
+    """Find recent Claude Code parent sessions and, optionally, sidechains."""
+    projects = claude_home / "projects"
+    if not projects.is_dir():
+        return []
+
+    candidates = list(projects.glob("*/*.jsonl"))
+    if include_subagents:
+        candidates.extend(projects.glob("*/*/subagents/*.jsonl"))
+
+    files = []
+    for path in candidates:
+        try:
+            mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+        except OSError:
+            continue
+        if mtime >= cutoff:
+            files.append((mtime, path))
+    files.sort(key=lambda item: item[0], reverse=True)
+    return files
+
+
 def truncate(text: str, limit: int) -> str:
     text = text.strip()
     if len(text) <= limit:
@@ -158,6 +186,149 @@ def extract_text(content) -> str:
             elif isinstance(block, str):
                 parts.append(block)
     return "\n".join(parts)
+
+
+def parse_claude_session(path: Path, skill_names, include_subagents: bool):
+    """Normalize one Claude Code JSONL session to the shared transcript shape."""
+    try:
+        raw = path.read_text(errors="replace")
+    except OSError:
+        return None
+    if len(raw) > MAX_FILE_BYTES:
+        raw = raw[:MAX_FILE_BYTES]
+
+    meta = {}
+    stats = {
+        "user_turns": 0,
+        "assistant_turns": 0,
+        "tool_calls": 0,
+        "repeated_tool_calls": 0,
+        "error_outputs": 0,
+    }
+    entries = []
+    seen_calls = {}
+    seen_assistant_messages = set()
+    call_args_text = []
+    used_tool_names = set()
+    skills_used = set()
+    first_ts = last_ts = None
+    is_sidechain = False
+
+    for line in raw.splitlines():
+        try:
+            obj = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+
+        ts = obj.get("timestamp")
+        if ts:
+            first_ts = first_ts or ts
+            last_ts = ts
+
+        if obj.get("isSidechain"):
+            is_sidechain = True
+            if not include_subagents:
+                return None
+
+        if not meta and obj.get("sessionId"):
+            session_id = obj.get("sessionId")
+            agent_id = obj.get("agentId")
+            meta = {
+                "id": f"{session_id}-{agent_id}" if agent_id else session_id,
+                "cwd": obj.get("cwd"),
+                "started_at": ts,
+                "originator": "claude-code",
+                "thread_source": "subagent" if obj.get("isSidechain") else None,
+                "cli_version": obj.get("version"),
+                "entrypoint": obj.get("entrypoint"),
+            }
+        elif meta:
+            meta["cwd"] = meta.get("cwd") or obj.get("cwd")
+            meta["started_at"] = meta.get("started_at") or ts
+            meta["cli_version"] = meta.get("cli_version") or obj.get("version")
+            meta["entrypoint"] = meta.get("entrypoint") or obj.get("entrypoint")
+            agent_id = obj.get("agentId")
+            if agent_id and not meta["id"].endswith(f"-{agent_id}"):
+                meta["id"] = f"{obj.get('sessionId') or meta['id']}-{agent_id}"
+
+        record_type = obj.get("type")
+        message = obj.get("message")
+        if record_type not in ("user", "assistant") or not isinstance(message, dict):
+            continue
+
+        role = message.get("role") or record_type
+        content = message.get("content")
+        blocks = content if isinstance(content, list) else [{"type": "text", "text": content}]
+        has_user_text = False
+
+        if role == "assistant":
+            message_id = message.get("id") or obj.get("uuid")
+            if message_id and message_id not in seen_assistant_messages:
+                seen_assistant_messages.add(message_id)
+                stats["assistant_turns"] += 1
+
+        for block in blocks:
+            if not isinstance(block, dict):
+                continue
+            block_type = block.get("type")
+            if block_type == "text":
+                text = block.get("text")
+                if not isinstance(text, str) or not text or looks_injected(text):
+                    continue
+                if role == "user":
+                    has_user_text = True
+                    entries.append(("user", truncate(text, MAX_MSG_CHARS)))
+                elif role == "assistant":
+                    entries.append(("assistant", truncate(text, MAX_MSG_CHARS)))
+            elif block_type == "tool_use":
+                stats["tool_calls"] += 1
+                name = str(block.get("name") or "unknown")
+                args = block.get("input") or {}
+                args_text = args if isinstance(args, str) else json.dumps(args, ensure_ascii=False)
+                key = hashlib.sha1((name + args_text).encode()).hexdigest()
+                seen_calls[key] = seen_calls.get(key, 0) + 1
+                if seen_calls[key] > 1:
+                    stats["repeated_tool_calls"] += 1
+                call_args_text.append(args_text)
+                used_tool_names.add(name)
+                if name == "Skill" and isinstance(args, dict):
+                    skill_name = args.get("skill")
+                    if skill_name in skill_names:
+                        skills_used.add(skill_name)
+                entries.append((f"tool:{name}", truncate(args_text, MAX_TOOL_CHARS)))
+            elif block_type == "tool_result":
+                result = extract_text(block.get("content"))
+                low = result[:2000].lower()
+                if block.get("is_error") or "error" in low or "failed" in low or "traceback" in low:
+                    stats["error_outputs"] += 1
+                entries.append(("output", truncate(result, MAX_TOOL_CHARS)))
+
+        if role == "user" and has_user_text:
+            stats["user_turns"] += 1
+
+    if not meta:
+        meta = {
+            "id": path.stem,
+            "cwd": None,
+            "started_at": first_ts,
+            "originator": "claude-code",
+            "thread_source": "subagent" if is_sidechain else None,
+        }
+    elif is_sidechain:
+        meta["thread_source"] = "subagent"
+
+    args_blob = "\n".join(call_args_text)
+    skills_used.update(
+        name for name in skill_names
+        if f"skills/{name}/" in args_blob or f"{name}/SKILL.md" in args_blob
+    )
+    stats["first_ts"] = first_ts
+    stats["last_ts"] = last_ts
+    stats["has_code_edits"] = (
+        bool(used_tool_names & CLAUDE_CODE_EDIT_TOOLS)
+        or any(hint in args_blob for hint in CODE_EDIT_HINTS)
+    )
+    return meta, stats, entries, sorted(skills_used)
 
 
 def looks_injected(text: str) -> bool:
@@ -630,6 +801,7 @@ def session_matches_repo(cwd, repo: Path) -> bool:
 
 def main():
     args = parse_args()
+    claude_home = Path(args.claude_home).expanduser()
     codex_home = Path(args.codex_home).expanduser()
     out_dir = Path(args.out).expanduser()
     transcripts_dir = out_dir / "transcripts"
@@ -644,6 +816,44 @@ def main():
     in_repo_count = 0
     scanned_count = 0
     sources = {}
+
+    requested_claude = args.harness in ("auto", "all", "claude")
+    if requested_claude and (claude_home / "projects").is_dir():
+        claude_files = find_claude_session_files(
+            claude_home,
+            cutoff,
+            args.include_subagents,
+        )
+        sources["claude"] = {
+            "home": str(claude_home),
+            "records_in_window": len(claude_files),
+        }
+        scanned_count += len(claude_files)
+        for mtime, path in claude_files:
+            parsed = parse_claude_session(path, skills.keys(), args.include_subagents)
+            if parsed is None:
+                continue
+            meta, stats, entries, skills_used = parsed
+            if not session_matches_repo(meta.get("cwd"), repo):
+                continue
+            in_repo_count += 1
+            if stats["assistant_turns"] < 1 or stats["tool_calls"] < 1:
+                continue
+            sessions.append({
+                "harness": "claude",
+                "meta": meta,
+                "stats": stats,
+                "skills_used": skills_used,
+                "file": str(path),
+                "modified_at": mtime.isoformat(),
+                "_entries": entries,
+            })
+    elif args.harness == "claude":
+        print(
+            f"error: Claude Code project history not found at {claude_home / 'projects'}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     requested_codex = args.harness in ("auto", "all", "codex")
     if requested_codex and codex_home.is_dir():
@@ -715,7 +925,7 @@ def main():
 
     if not sources:
         print(
-            "error: no local Codex session home or Warp conversation database found",
+            "error: no Claude Code or Codex session home, or Warp conversation database found",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -762,6 +972,7 @@ def main():
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "harness": next(iter(sources)) if len(sources) == 1 else "mixed",
         "sources": sources,
+        "claude_home": str(claude_home) if "claude" in sources else None,
         "codex_home": str(codex_home) if "codex" in sources else None,
         "warp_databases": [str(path) for path in warp_databases],
         "repo": str(repo),

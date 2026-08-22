@@ -24,16 +24,18 @@ REPORT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/skill-doctor-XXXXXXXX")"
 python3 "$SKILL_ROOT/scripts/collect_sessions.py" --out "$REPORT_DIR"
 ```
 
-This scopes to the git repo containing the current directory: skills are discovered from the repo's `.agents/skills`, `.claude/skills`, and `.codex/skills`, and only sessions whose working directory is inside the repo are scored. By default `--harness auto` scans every available local source: Codex rollout JSONL and Warp's read-only `warp.sqlite` conversation stores. Duplicate Warp conversations across installed channels are deduplicated by conversation ID.
+This scopes to the git repo containing the current directory: skills are discovered from the repo's `.agents/skills`, `.claude/skills`, and `.codex/skills`, and only sessions whose working directory is inside the repo are scored. By default `--harness auto` scans every available local source: Claude Code project-history JSONL, Codex rollout JSONL, and Warp's read-only `warp.sqlite` conversation stores. Duplicate Warp conversations across installed channels are deduplicated by conversation ID.
 
 Useful flags:
 
-- `--harness codex|warp|all|auto` — which local session sources to scan.
+- `--harness claude|codex|warp|all|auto` — which local session sources to scan.
 - `--repo PATH` — target a different repo.
 - `--include-global-skills` — also grade global skills.
 - `--days N` — lookback window (default 45).
 - `--max-sessions N` — cap on sampled sessions (default 12).
 - `--skills-dir PATH` — nonstandard skill locations.
+- `--include-subagents` — include Claude Code sidechains, Codex subagents, and Warp child agents.
+- `--claude-home PATH` — when `~/.claude` isn't the Claude Code config directory.
 - `--codex-home PATH` — when `~/.codex` isn't the Codex home.
 - `--warp-db PATH` — an explicit Warp database (repeatable).
 - `--warp-data-dir PATH` — a nonstandard Warp channel-data directory.
@@ -81,7 +83,7 @@ Write `$REPORT_DIR/report.json`:
 {
   "title": "Agent Skill Report",
   "generated_at": "<ISO timestamp>",
-  "harness": "<harness from inventory.json: codex, warp, or mixed>",
+  "harness": "<harness from inventory.json: claude, codex, warp, or mixed>",
   "handle": "<repo_name from inventory.json>",
   "stats": {
     "sessions_analyzed": 0, "sessions_scanned": 0,
