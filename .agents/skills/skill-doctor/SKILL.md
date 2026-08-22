@@ -42,7 +42,7 @@ Read `$REPORT_DIR/inventory.json`. If `sessions_sampled` is 0, tell the user the
 
 ## Step 2: Score each sampled transcript
 
-Scoring is based on efficiency and code quality for the sessions sampled. Delegate scoring to subagents, if available, and grade in batches for larger sample sizes. Pass the following rubrics as context:
+Scoring is based on efficiency and code quality for the sessions sampled. Score transcripts in the current local agent process, or delegate only to local child agents that keep transcript contents on the user's machine, and grade in batches for larger sample sizes. Pass the following rubrics as context:
 
 - `$SKILL_ROOT/scorers/efficiency.md`
 - `$SKILL_ROOT/scorers/code-quality.md`
