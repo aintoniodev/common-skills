@@ -470,7 +470,7 @@ def page_script(card_data: str) -> str:
   });
 })();
 """
-    return script.replace("__CARD__", card_data).replace("__CLAMP__", str(DIFF_CLAMP_PX))
+    return script.replace("__CARD__", card_data.replace("</", "<\\/")).replace("__CLAMP__", str(DIFF_CLAMP_PX))
 
 
 def main():
