@@ -45,10 +45,10 @@ If the user chooses projects, ask for one or more project paths. Expand and vali
 
 Then ask **“Which skills should I evaluate?”** with:
 
-1. **Skills in the graded projects + global skills** — recommended.
-2. **Skills in the graded projects only**.
+1. **Project skills + global skills** — recommended.
+2. **Project skills only**.
 
-For an all-conversations run, “graded projects” means the local git repositories inferred from the conversations' working directories. After these answers, proceed immediately.
+For an all-conversations run, “Project skills” means skills from local git repositories inferred from the conversations' working directories. After these answers, proceed immediately.
 
 Never write artifacts into the user's repo. Create one fresh, collision-free scratch directory per run and use it as `REPORT_DIR` for every artifact:
 

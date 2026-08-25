@@ -23,10 +23,10 @@ class ReportRendererTests(unittest.TestCase):
         self.assertIn("All conversations", skill_text)
         self.assertIn("Choose projects to analyze", skill_text)
         self.assertIn(
-            "Skills in the graded projects + global skills",
+            "Project skills + global skills",
             skill_text,
         )
-        self.assertIn("Skills in the graded projects only", skill_text)
+        self.assertIn("Project skills only", skill_text)
         self.assertNotIn("--harness claude|codex|warp", skill_text)
         self.assertNotIn("--claude-home PATH", skill_text)
         self.assertIn("| Warp | `warp` |", harness_text)
