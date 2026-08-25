@@ -4,10 +4,19 @@
 import unittest
 from pathlib import Path
 
-from render_report import render_page
+from render_report import embedded_diffs_script, render_page
 
 
 class ReportRendererTests(unittest.TestCase):
+    def test_code_diffs_follow_os_theme(self):
+        bundle = embedded_diffs_script()
+
+        self.assertIn('themeType:"system"', bundle)
+        self.assertIn(
+            'theme:{dark:"pierre-dark",light:"pierre-light"}',
+            bundle,
+        )
+
     def test_factories_footer_is_sticky_and_contains_inline_cta(self):
         report = {
             "title": "Agent Skill Report",
