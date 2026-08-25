@@ -102,11 +102,22 @@ PAGE_CSS = """
 body {
   --fg: #1a1522; --muted: #5d5966; --muted-2: #918d9a; --accent: #2a1eff;
   --line: rgba(13, 10, 61, 0.16); --line-soft: rgba(13, 10, 61, 0.07);
-  --bg-panel: #f6f5fb; --yellow: #eef17c;
+  --page-bg: #fff; --surface: #fff; --bg-panel: #f6f5fb; --yellow: #eef17c;
+  --button-fg: #1a1522;
+  --footer-shadow: rgba(13, 10, 61, 0.12);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  background: radial-gradient(circle at 1px 1px, var(--line-soft) 1px, transparent 0) 0 0 / 22px 22px, #fff;
+  background: radial-gradient(circle at 1px 1px, var(--line-soft) 1px, transparent 0) 0 0 / 22px 22px, var(--page-bg);
   color: var(--fg); max-width: 900px; margin: 0 auto; padding: 48px 24px;
-  line-height: 1.65; font-size: 13px;
+  line-height: 1.65; font-size: 13px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  body {
+    --fg: #f4f1f8; --muted: #bbb5c2; --muted-2: #928b9b; --accent: #9188ff;
+    --line: rgba(239, 235, 255, 0.2); --line-soft: rgba(239, 235, 255, 0.08);
+    --page-bg: #0f0d14; --surface: #17141d; --bg-panel: #211d29;
+    --footer-shadow: rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
 }
 ::selection { background: var(--accent); color: #fff; }
 h1 { font-weight: 500; letter-spacing: -2px; font-size: 34px; margin: 4px 0 0; }
@@ -122,19 +133,19 @@ li { margin-bottom: 10px; }
 .stamp .mark { width: 27px; height: 26px; flex: none; display: block; }
 .stamp-name { font-size: 15px; font-weight: 600; letter-spacing: -0.03em; }
 .stamp-sub { font-size: 11px; color: var(--muted-2); text-transform: lowercase; letter-spacing: 0.02em; }
-.stamp-row { border: 1px solid var(--line); background: #fff; padding: 12px 16px; }
+.stamp-row { border: 1px solid var(--line); background: var(--surface); padding: 12px 16px; }
 .factories-footer { position: sticky; bottom: 16px; z-index: 20; margin-top: 40px;
-  box-shadow: 0 8px 24px rgba(13, 10, 61, 0.12); }
+  box-shadow: 0 8px 24px var(--footer-shadow); }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .title-row { margin-top: 4px; }
 .title-row h1 { margin: 0; }
-.cta-button { font-family: inherit; font-size: 13px; font-weight: 600; color: var(--fg);
-  background: var(--yellow); border: 1px solid var(--fg); padding: 8px 14px;
+.cta-button { font-family: inherit; font-size: 13px; font-weight: 600; color: var(--button-fg);
+  background: var(--yellow); border: 1px solid var(--button-fg); padding: 8px 14px;
   text-decoration: none; white-space: nowrap; flex: none; cursor: pointer; }
 .cta-button:hover { background: #f4f79f; }
 .cta-button[disabled] { cursor: default; opacity: 0.65; }
 .scorecard { display: flex; align-items: center; gap: 48px; border: 1px solid var(--line);
-  background: #fff; padding: 26px 28px; margin-top: 20px; }
+  background: var(--surface); padding: 26px 28px; margin-top: 20px; }
 .grade-col { text-align: center; flex: none; width: 170px; }
 .grade { font-size: 96px; font-weight: 600; line-height: 1; letter-spacing: -5px; color: var(--accent); }
 .grade-label { font-size: 11px; color: var(--muted-2); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.14em; }
@@ -161,7 +172,7 @@ li { margin-bottom: 10px; }
   mask-image: linear-gradient(#000 calc(100% - 72px), transparent);
 }
 .diff-toggle { font-family: inherit; font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--accent); background: #fff;
+  text-transform: uppercase; color: var(--accent); background: var(--surface);
   border: 1px solid var(--line); padding: 5px 10px; margin-top: 6px; cursor: pointer; }
 .diff-toggle:hover { border-color: var(--accent); }
 """
@@ -222,6 +233,7 @@ def render_page(r) -> str:
     })
 
     return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
 <title>{esc(r.get('title', 'Agent Skill Report'))}</title>
 <style>{PAGE_CSS.replace('__CLAMP__', str(DIFF_CLAMP_PX))}</style></head><body>
 <div class="tag">skill-doctor</div>
