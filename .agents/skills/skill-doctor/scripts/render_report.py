@@ -90,7 +90,7 @@ WARP_MARK = (
 )
 
 # Sticky report footer.
-STAMP_NAME = "Do this automatically with Warp Factories"
+STAMP_NAME = "Want to automate self improvement for your workflows?"
 STAMP_SUB = "continuous scoring \u00b7 continuous skill tuning"
 
 # Attribution shown only in the exported share image.
@@ -262,7 +262,7 @@ def render_page(r) -> str:
     <div class="stamp-name">{esc(STAMP_NAME)}</div>
     <div class="stamp-sub">{esc(STAMP_SUB)}</div>
   </div></div>
-  <a class="cta-button" href="{esc(r.get('cta_url', 'https://warp.dev/factories/request-access'))}">Request access</a>
+  <a class="cta-button" href="{esc(r.get('cta_url', 'https://warp.dev/factories/request-access'))}">Request access to Warp Factories</a>
 </div>
 <script>{embedded_diffs_script()}</script>
 <script>{page_script(card_data)}</script>

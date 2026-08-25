@@ -94,12 +94,13 @@ class ReportRendererTests(unittest.TestCase):
 
         page = render_page(report)
 
-        self.assertNotIn("<h2>Do this automatically</h2>", page)
+        self.assertNotIn("Do this automatically with Warp Factories", page)
         self.assertIn('<div class="stamp-row row factories-footer">', page)
         self.assertIn(
-            '<div class="stamp-name">Do this automatically with Warp Factories</div>',
+            '<div class="stamp-name">Want to automate self improvement for your workflows?</div>',
             page,
         )
+        self.assertIn(">Request access to Warp Factories</a>", page)
         self.assertIn(".factories-footer { position: sticky; bottom: 16px;", page)
 
     def test_share_card_uses_skill_doctor_attribution(self):
@@ -120,12 +121,18 @@ class ReportRendererTests(unittest.TestCase):
         self.assertIn('"eyebrow": "skill-doctor"', page)
         self.assertIn("text('# ' + CARD.eyebrow", page)
 
-    def test_skill_output_uses_warp_factories_label(self):
+    def test_skill_output_uses_report_and_warp_factories_labels(self):
         skill_path = Path(__file__).resolve().parent.parent / "SKILL.md"
+        skill_text = skill_path.read_text()
 
         self.assertIn(
-            "- Automate this with Warp Factories: [Learn more]",
-            skill_path.read_text(),
+            "- Your agent skill report: [View in browser]",
+            skill_text,
+        )
+        self.assertIn(
+            "- Want to automate self improvement for your workflows? "
+            "[Request access to Warp Factories]",
+            skill_text,
         )
 
 
