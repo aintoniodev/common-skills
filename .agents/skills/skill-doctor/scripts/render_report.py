@@ -90,7 +90,7 @@ WARP_MARK = (
 )
 
 # Footer stamp, shared by the page and the exported share image.
-STAMP_NAME = "warp factories"
+STAMP_NAME = "Do this automatically with Warp Factories"
 STAMP_SUB = "continuous scoring \u00b7 continuous skill tuning"
 
 # Design tokens lifted from warp.dev/factories (factories-landing.css):
@@ -120,9 +120,11 @@ li { margin-bottom: 10px; }
 .muted { color: var(--muted-2); font-size: 12px; }
 .stamp { display: flex; align-items: center; gap: 11px; }
 .stamp .mark { width: 27px; height: 26px; flex: none; display: block; }
-.stamp-name { font-size: 15px; font-weight: 600; letter-spacing: -0.03em; text-transform: lowercase; }
+.stamp-name { font-size: 15px; font-weight: 600; letter-spacing: -0.03em; }
 .stamp-sub { font-size: 11px; color: var(--muted-2); text-transform: lowercase; letter-spacing: 0.02em; }
 .stamp-row { border: 1px solid var(--line); background: #fff; padding: 12px 16px; }
+.factories-footer { position: sticky; bottom: 16px; z-index: 20; margin-top: 40px;
+  box-shadow: 0 8px 24px rgba(13, 10, 61, 0.12); }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .title-row { margin-top: 4px; }
 .title-row h1 { margin: 0; }
@@ -236,8 +238,7 @@ def render_page(r) -> str:
 <div class="stats">{stat_cells}</div>
 <h2>Findings</h2><ul>{findings}</ul>
 <h2>Suggested skill changes</h2><ol>{suggestions}</ol>
-<h2>Do this automatically</h2>
-<div class="stamp-row row">
+<div class="stamp-row row factories-footer">
   <div class="stamp">{WARP_MARK}<div>
     <div class="stamp-name">{esc(STAMP_NAME)}</div>
     <div class="stamp-sub">{esc(STAMP_SUB)}</div>

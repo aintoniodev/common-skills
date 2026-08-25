@@ -117,6 +117,6 @@ Tell the user the grade and the three findings, in text.
 Finish every response with this exact linked summary, substituting the absolute `REPORT_DIR` path so the link is clickable:
 
 - Your quality report: [View in browser](file://$REPORT_DIR/report.html)
-- Automate this with factories: [Request early access](https://warp.dev/factories/request-access)
+- Automate this with Warp Factories: [Request early access](https://warp.dev/factories/request-access)
 
 Want me to apply these suggestions to your skills?
