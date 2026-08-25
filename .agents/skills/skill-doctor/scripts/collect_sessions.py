@@ -60,7 +60,17 @@ def parse_args():
         default=os.environ.get("WARP_DATA_DIR"),
         help="directory containing Warp channel data directories",
     )
-    p.add_argument("--repo", default=None, help="repo to scope to (default: git root of cwd, else cwd)")
+    p.add_argument(
+        "--repo",
+        action="append",
+        default=[],
+        help="project to include (repeatable; default: git root of cwd, else cwd)",
+    )
+    p.add_argument(
+        "--all-conversations",
+        action="store_true",
+        help="score conversations from every project represented in local history",
+    )
     p.add_argument("--include-global-skills", action="store_true",
                    help="also discover skills outside the repo (~/.codex/skills, ~/.agents/skills, ~/.claude/skills)")
     p.add_argument("--days", type=int, default=45, help="only consider sessions modified in the last N days")
@@ -87,12 +97,30 @@ def resolve_repo(repo_arg) -> Path:
     return Path.cwd().resolve()
 
 
-def discover_skills(repo: Path, codex_home: Path, extra_dirs, include_global: bool):
-    roots = [
-        repo / ".agents" / "skills",
-        repo / ".claude" / "skills",
-        repo / ".codex" / "skills",
-    ]
+def resolve_repos(repo_args):
+    if not repo_args:
+        return [resolve_repo(None)]
+    repos = []
+    seen = set()
+    for value in repo_args:
+        repo = resolve_repo(value)
+        if repo in seen:
+            continue
+        seen.add(repo)
+        repos.append(repo)
+    return repos
+
+
+def discover_skills(repos, codex_home: Path, extra_dirs, include_global: bool):
+    if isinstance(repos, Path):
+        repos = [repos]
+    roots = []
+    for repo in repos:
+        roots.extend((
+            repo / ".agents" / "skills",
+            repo / ".claude" / "skills",
+            repo / ".codex" / "skills",
+        ))
     if include_global:
         roots += [
             codex_home / "skills",
@@ -703,9 +731,15 @@ def parse_warp_conversation(record, skill_names, include_subagents):
                 stats["user_turns"] += 1
                 entries.append(("user", truncate(text, MAX_MSG_CHARS)))
         elif kind == "invoke_skill":
-            skill_name = skill_name_from_reference(message.get("skill"), skill_names)
+            skill_reference = message.get("skill")
+            skill_name = skill_name_from_reference(skill_reference, skill_names)
             if skill_name:
                 skills_used.add(skill_name)
+            if skill_reference:
+                entries.append((
+                    "skill",
+                    truncate(json.dumps(skill_reference, ensure_ascii=False), MAX_TOOL_CHARS),
+                ))
             user_query = message.get("user_query") or {}
             text = user_query.get("text", "")
             cwd = cwd or user_query.get("cwd")
@@ -726,10 +760,16 @@ def parse_warp_conversation(record, skill_names, include_subagents):
             if seen_calls[key] > 1:
                 stats["repeated_tool_calls"] += 1
             has_code_edits = has_code_edits or name == "apply_file_diffs"
-            skill_name = skill_name_from_reference(message.get("skill"), skill_names)
+            skill_reference = message.get("skill")
+            skill_name = skill_name_from_reference(skill_reference, skill_names)
             if skill_name:
                 skills_used.add(skill_name)
             entries.append((f"tool:{name}", truncate(payload, MAX_TOOL_CHARS)))
+            if skill_reference:
+                entries.append((
+                    "skill",
+                    truncate(json.dumps(skill_reference, ensure_ascii=False), MAX_TOOL_CHARS),
+                ))
         elif kind == "tool_call_result":
             payload = message.get("payload", "")
             cwd = cwd or message.get("cwd")
@@ -799,21 +839,84 @@ def session_matches_repo(cwd, repo: Path) -> bool:
     return p.name == repo.name or repo.name in p.parts
 
 
+def session_matches_repos(cwd, repos) -> bool:
+    return any(session_matches_repo(cwd, repo) for repo in repos)
+
+
+def infer_session_repos(sessions):
+    repos = []
+    seen = set()
+    for session in sessions:
+        cwd = session["meta"].get("cwd")
+        if not cwd:
+            continue
+        path = Path(cwd).expanduser()
+        if not path.is_dir():
+            continue
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(path), "rev-parse", "--show-toplevel"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            continue
+        if result.returncode != 0 or not result.stdout.strip():
+            continue
+        repo = Path(result.stdout.strip()).resolve()
+        if repo in seen:
+            continue
+        seen.add(repo)
+        repos.append(repo)
+    return repos
+
+
+def detect_skills_from_entries(entries, skill_names):
+    tool_text = "\n".join(
+        text
+        for role, text in entries
+        if role == "skill" or role.startswith("tool:")
+    ).replace("\\", "/")
+    detected = set()
+    for name in skill_names:
+        markers = (
+            f"skills/{name}/",
+            f"{name}/SKILL.md",
+            f'"skill": "{name}"',
+            f'"name": "{name}"',
+            f'"bundled_skill_id": "{name}"',
+        )
+        if any(marker in tool_text for marker in markers):
+            detected.add(name)
+    return detected
+
+
 def main():
     args = parse_args()
+    if args.all_conversations and args.repo:
+        print(
+            "error: --all-conversations cannot be combined with --repo",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     claude_home = Path(args.claude_home).expanduser()
     codex_home = Path(args.codex_home).expanduser()
     out_dir = Path(args.out).expanduser()
     transcripts_dir = out_dir / "transcripts"
     transcripts_dir.mkdir(parents=True, exist_ok=True)
 
-
-    repo = resolve_repo(args.repo)
-    skills = discover_skills(repo, codex_home, args.skills_dir, args.include_global_skills)
+    repos = [] if args.all_conversations else resolve_repos(args.repo)
+    skills = discover_skills(
+        repos,
+        codex_home,
+        args.skills_dir,
+        args.include_global_skills,
+    )
     cutoff = datetime.now(timezone.utc) - timedelta(days=args.days)
 
     sessions = []
-    in_repo_count = 0
+    in_scope_count = 0
     scanned_count = 0
     sources = {}
 
@@ -834,9 +937,12 @@ def main():
             if parsed is None:
                 continue
             meta, stats, entries, skills_used = parsed
-            if not session_matches_repo(meta.get("cwd"), repo):
+            if not args.all_conversations and not session_matches_repos(
+                meta.get("cwd"),
+                repos,
+            ):
                 continue
-            in_repo_count += 1
+            in_scope_count += 1
             if stats["assistant_turns"] < 1 or stats["tool_calls"] < 1:
                 continue
             sessions.append({
@@ -865,9 +971,12 @@ def main():
             if parsed is None:
                 continue
             meta, stats, entries, skills_used = parsed
-            if not session_matches_repo(meta.get("cwd"), repo):
+            if not args.all_conversations and not session_matches_repos(
+                meta.get("cwd"),
+                repos,
+            ):
                 continue
-            in_repo_count += 1
+            in_scope_count += 1
             if stats["assistant_turns"] < 1 or stats["tool_calls"] < 1:
                 continue
             sessions.append({
@@ -904,9 +1013,12 @@ def main():
                 if parsed is None:
                     continue
                 meta, stats, entries, skills_used = parsed
-                if not session_matches_repo(meta.get("cwd"), repo):
+                if not args.all_conversations and not session_matches_repos(
+                    meta.get("cwd"),
+                    repos,
+                ):
                     continue
-                in_repo_count += 1
+                in_scope_count += 1
                 if stats["assistant_turns"] < 1 or stats["tool_calls"] < 1:
                     continue
                 sessions.append({
@@ -929,6 +1041,22 @@ def main():
             file=sys.stderr,
         )
         sys.exit(1)
+    if args.all_conversations:
+        repos = infer_session_repos(sessions)
+        skills = discover_skills(
+            repos,
+            codex_home,
+            args.skills_dir,
+            args.include_global_skills,
+        )
+    for session in sessions:
+        detected = detect_skills_from_entries(
+            session["_entries"],
+            skills.keys(),
+        )
+        session["skills_used"] = sorted(
+            set(session["skills_used"]) | detected
+        )
 
     sessions.sort(key=lambda session: session["modified_at"], reverse=True)
     for session in sessions:
@@ -968,6 +1096,16 @@ def main():
         for name in s["skills_used"]:
             skill_usage[name] += 1
 
+    if args.all_conversations:
+        conversation_scope = "all"
+        scope_name = "all-conversations"
+    elif len(repos) == 1:
+        conversation_scope = "projects"
+        scope_name = repos[0].name
+    else:
+        conversation_scope = "projects"
+        scope_name = "multiple-projects"
+
     inventory = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "harness": next(iter(sources)) if len(sources) == 1 else "mixed",
@@ -975,15 +1113,19 @@ def main():
         "claude_home": str(claude_home) if "claude" in sources else None,
         "codex_home": str(codex_home) if "codex" in sources else None,
         "warp_databases": [str(path) for path in warp_databases],
-        "repo": str(repo),
-        "repo_name": repo.name,
+        "conversation_scope": conversation_scope,
+        "repo": str(repos[0]) if len(repos) == 1 else None,
+        "repos": [str(repo) for repo in repos],
+        "repo_name": scope_name,
+        "repo_names": [repo.name for repo in repos],
         "window_days": args.days,
         "skills": sorted(skills.values(), key=lambda x: x["name"]),
         "skill_usage": skill_usage,
         "stats": {
             "session_files_in_window": scanned_count,
             "session_records_in_window": scanned_count,
-            "sessions_in_repo": in_repo_count,
+            "sessions_in_repo": in_scope_count,
+            "sessions_in_scope": in_scope_count,
             "sessions_considered": len(sessions),
             "sessions_sampled": len(sampled_keys),
             "skills_found": len(skills),
@@ -994,10 +1136,17 @@ def main():
     (out_dir / "inventory.json").write_text(json.dumps(inventory, indent=2))
 
     st = inventory["stats"]
-    print(f"repo:              {repo}")
+    print(
+        "scope:             "
+        + (
+            "all conversations"
+            if args.all_conversations
+            else ", ".join(str(repo) for repo in repos)
+        )
+    )
     print(f"sources:           {', '.join(sources)}")
     print(f"skills found:      {st['skills_found']} ({st['skills_used']} used in window)")
-    print(f"sessions in window: {st['session_records_in_window']} records, {st['sessions_in_repo']} in repo, {st['sessions_considered']} scoreable")
+    print(f"sessions in window: {st['session_records_in_window']} records, {st['sessions_in_scope']} in scope, {st['sessions_considered']} scoreable")
     print(f"sessions sampled:  {st['sessions_sampled']} -> {transcripts_dir}")
     print(f"inventory:         {out_dir / 'inventory.json'}")
 

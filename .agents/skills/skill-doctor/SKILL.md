@@ -1,16 +1,54 @@
 ---
 name: "skill-doctor"
-description: "Grades a repo's agent skills by scoring agent conversations against efficiency and code-quality rubrics, then drafts concrete skill edits and a shareable report. Use when the user wants their agent setup graded from real conversation history, or asks which of their installed skills are actually working."
+description: "Grades agent skills by scoring agent conversations against efficiency and code-quality rubrics, then drafts concrete skill edits and a shareable report. Use when the user wants their agent setup graded from real conversation history, or asks which of their installed skills are actually working."
 ---
 # skill-doctor
 
 Grade the user's agent setup by scoring recent local agent conversations, then propose concrete skill edits and render one shareable report page.
 
-The report is scoped to one repo: the skills that live in it and the conversations that ran inside it. Run from the repo the user wants graded.
+The report can cover conversations in the current repository, conversations in selected projects, or all local conversations. It can evaluate project skills alone or project and global skills together.
 
 Everything runs locally. Never upload transcripts, session files, or any excerpt of them anywhere. The only shareable artifact is the report the user chooses to post.
 
 Let `SKILL_ROOT` be the directory containing this SKILL.md.
+
+## Step 0: Start the run
+
+### Verify the executing harness
+
+Read `$SKILL_ROOT/references/supported-harnesses.md` and identify the harness executing this skill from the runtime context. If it is unsupported or cannot be identified confidently, follow the reference's stop behavior. Do not create a report directory or read conversation history.
+
+### Ask which conversations to grade
+
+First check whether the current directory is inside a git repository:
+
+```bash
+git rev-parse --show-toplevel
+```
+
+Use the harness's user-question tool when available.
+
+When a current repository is available, ask **“Which conversations should I grade?”** with:
+
+1. **Conversations in this repository** — recommended.
+2. **All conversations**.
+3. **Choose projects to analyze**.
+
+When there is no current repository, ask the same question with:
+
+1. **All conversations** — recommended.
+2. **Choose projects to analyze**.
+
+If the user chooses projects, ask for one or more project paths. Expand and validate every path as a git repository before continuing. The run produces one combined report across those projects.
+
+### Ask which skills to evaluate
+
+Then ask **“Which skills should I evaluate?”** with:
+
+1. **Skills in the graded projects + global skills** — recommended.
+2. **Skills in the graded projects only**.
+
+For an all-conversations run, “graded projects” means the local git repositories inferred from the conversations' working directories. After these answers, proceed immediately.
 
 Never write artifacts into the user's repo. Create one fresh, collision-free scratch directory per run and use it as `REPORT_DIR` for every artifact:
 
@@ -19,28 +57,35 @@ REPORT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/skill-doctor-XXXXXXXX")"
 ```
 
 ## Step 1: Collect
+Build the collector arguments from the startup answers:
+
+- Current repository: `--repo "$REPO"`.
+- Selected projects: repeat `--repo PATH` for every project.
+- All conversations: `--all-conversations`.
+- Project and global skills: add `--include-global-skills`.
+- Project skills only: do not add `--include-global-skills`.
 
 ```bash
-python3 "$SKILL_ROOT/scripts/collect_sessions.py" --out "$REPORT_DIR"
+python3 "$SKILL_ROOT/scripts/collect_sessions.py" \
+  --out "$REPORT_DIR" \
+  <conversation-scope arguments> \
+  <skill-scope arguments>
 ```
 
-This scopes to the git repo containing the current directory: skills are discovered from the repo's `.agents/skills`, `.claude/skills`, and `.codex/skills`, and only sessions whose working directory is inside the repo are scored. By default `--harness auto` scans every available local source: Claude Code project-history JSONL, Codex rollout JSONL, and Warp's read-only `warp.sqlite` conversation stores. Duplicate Warp conversations across installed channels are deduplicated by conversation ID.
+By default `--harness auto` scans every locally available supported source. Read `$SKILL_ROOT/references/supported-harnesses.md` for source identifiers, storage details, skill locations, and source-specific override flags.
 
 Useful flags:
 
-- `--harness claude|codex|warp|all|auto` — which local session sources to scan.
-- `--repo PATH` — target a different repo.
+- `--harness VALUE` — which local session sources to scan; use the reference's collector IDs.
+- `--repo PATH` — include a project; repeatable.
+- `--all-conversations` — do not filter conversations by project.
 - `--include-global-skills` — also grade global skills.
 - `--days N` — lookback window (default 45).
 - `--max-sessions N` — cap on sampled sessions (default 12).
 - `--skills-dir PATH` — nonstandard skill locations.
-- `--include-subagents` — include Claude Code sidechains, Codex subagents, and Warp child agents.
-- `--claude-home PATH` — when `~/.claude` isn't the Claude Code config directory.
-- `--codex-home PATH` — when `~/.codex` isn't the Codex home.
-- `--warp-db PATH` — an explicit Warp database (repeatable).
-- `--warp-data-dir PATH` — a nonstandard Warp channel-data directory.
+- `--include-subagents` — include child or sidechain sessions.
 
-Read `$REPORT_DIR/inventory.json`. If `sessions_sampled` is 0, tell the user there's nothing recent to score in this repo (suggest raising `--days` or checking `--repo`) and stop. If `skills_found` is 0, continue — the report becomes a case for creating skills, and `skill_coverage` is 0.
+Read `$REPORT_DIR/inventory.json`. If `sessions_sampled` is 0, tell the user there is nothing recent to score in the selected conversation scope (suggest raising `--days` or choosing different projects) and stop. If `skills_found` is 0, continue — the report becomes a case for creating skills, and `skill_coverage` is 0.
 
 ## Step 2: Score each sampled transcript
 
@@ -65,7 +110,7 @@ Then derive the substance:
 
 ## Step 4: Draft skill edits
 
-Follow `$SKILL_ROOT/references/skill-improvements.md` to propose improvements to repository skills based on the aggregated data.
+Follow `$SKILL_ROOT/references/skill-improvements.md` to propose improvements to project skills based on the aggregated data.
 
 1. Read the skill's current file (path is in `inventory.json`).
 2. Write the full improved version to `$REPORT_DIR/proposed/<skill-name>/SKILL.md`, changing only what the evidence justifies. Improve the parts the sessions actually exercised: the trigger description that failed to fire, the missing preflight check, the step the agent had to figure out by trial and error.
@@ -83,7 +128,7 @@ Write `$REPORT_DIR/report.json`:
 {
   "title": "Agent Skill Report",
   "generated_at": "<ISO timestamp>",
-  "harness": "<harness from inventory.json: claude, codex, warp, or mixed>",
+  "harness": "<harness from inventory.json>",
   "handle": "<repo_name from inventory.json>",
   "stats": {
     "sessions_analyzed": 0, "sessions_scanned": 0,

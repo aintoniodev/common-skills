@@ -8,6 +8,32 @@ from render_report import embedded_diffs_script, render_page
 
 
 class ReportRendererTests(unittest.TestCase):
+    def test_skill_startup_contract_is_centralized(self):
+        skill_root = Path(__file__).resolve().parent.parent
+        skill_text = (skill_root / "SKILL.md").read_text()
+        harness_text = (
+            skill_root / "references" / "supported-harnesses.md"
+        ).read_text()
+
+        self.assertIn(
+            "$SKILL_ROOT/references/supported-harnesses.md",
+            skill_text,
+        )
+        self.assertIn("Conversations in this repository", skill_text)
+        self.assertIn("All conversations", skill_text)
+        self.assertIn("Choose projects to analyze", skill_text)
+        self.assertIn(
+            "Skills in the graded projects + global skills",
+            skill_text,
+        )
+        self.assertIn("Skills in the graded projects only", skill_text)
+        self.assertNotIn("--harness claude|codex|warp", skill_text)
+        self.assertNotIn("--claude-home PATH", skill_text)
+        self.assertIn("| Warp | `warp` |", harness_text)
+        self.assertIn("| Claude Code | `claude` |", harness_text)
+        self.assertIn("| Codex | `codex` |", harness_text)
+        self.assertIn("stop before creating a report directory", harness_text)
+
     def test_code_diffs_follow_os_theme(self):
         bundle = embedded_diffs_script()
 

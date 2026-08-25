@@ -8,7 +8,13 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from collect_sessions import find_claude_session_files, parse_claude_session
+from collect_sessions import (
+    detect_skills_from_entries,
+    discover_skills,
+    find_claude_session_files,
+    parse_claude_session,
+    session_matches_repos,
+)
 
 
 def write_jsonl(path, records):
@@ -17,6 +23,45 @@ def write_jsonl(path, records):
 
 
 class ClaudeSessionTests(unittest.TestCase):
+    def test_discovers_skills_and_matches_sessions_across_projects(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = root / "first"
+            second = root / "second"
+            first_skill = first / ".agents" / "skills" / "alpha" / "SKILL.md"
+            second_skill = second / ".claude" / "skills" / "beta" / "SKILL.md"
+            first_skill.parent.mkdir(parents=True)
+            second_skill.parent.mkdir(parents=True)
+            first_skill.write_text("---\ndescription: Alpha\n---\n")
+            second_skill.write_text("---\ndescription: Beta\n---\n")
+
+            skills = discover_skills(
+                [first, second],
+                root / "codex-home",
+                [],
+                False,
+            )
+
+            self.assertEqual(set(skills), {"alpha", "beta"})
+            self.assertTrue(
+                session_matches_repos(second / "src", [first, second])
+            )
+            self.assertFalse(
+                session_matches_repos(root / "elsewhere", [first, second])
+            )
+
+    def test_detects_skills_from_deferred_tool_entries(self):
+        entries = [
+            ("tool:Skill", '{"skill": "alpha"}'),
+            ("tool:read", '{"path": "/repo/.agents/skills/beta/SKILL.md"}'),
+            ("assistant", "Mentioning gamma here does not count."),
+        ]
+
+        self.assertEqual(
+            detect_skills_from_entries(entries, {"alpha", "beta", "gamma"}),
+            {"alpha", "beta"},
+        )
+
     def test_discovers_parent_sessions_and_optional_subagents(self):
         with tempfile.TemporaryDirectory() as tmp:
             claude_home = Path(tmp)
