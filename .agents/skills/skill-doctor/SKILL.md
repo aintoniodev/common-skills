@@ -89,7 +89,7 @@ Read `$REPORT_DIR/inventory.json`. If `sessions_sampled` is 0, tell the user the
 
 ## Step 2: Score each sampled transcript
 
-Scoring is based on efficiency and code quality for the sessions sampled. For large datasets, use batching (10 transcripts per batch recommended). Score batches in the current local agent process, or delegate only to local child agents that keep transcript contents on the user's machine. Pass the following rubrics as context:
+Scoring is based on efficiency and code quality for the sessions sampled. Process datasets of 50 transcripts or fewer in a single batch. For datasets with more than 50 transcripts, use parallel batches (20 transcripts per batch recommended). Score batches in the current local agent process, or delegate only to local child agents that keep transcript contents on the user's machine. Pass the following rubrics as context:
 
 - `$SKILL_ROOT/scorers/efficiency.md`
 - `$SKILL_ROOT/scorers/code-quality.md`

@@ -90,7 +90,7 @@ WARP_MARK = (
 )
 
 # Sticky report footer.
-STAMP_NAME = "Want to automate self improvement for your workflows?"
+STAMP_NAME = "Self improve your workflows with Warp Factories"
 STAMP_SUB = "continuous scoring \u00b7 continuous skill tuning"
 
 # Attribution shown only in the exported share image.

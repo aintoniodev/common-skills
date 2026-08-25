@@ -28,7 +28,12 @@ class ReportRendererTests(unittest.TestCase):
         )
         self.assertIn("Project skills only", skill_text)
         self.assertIn(
-            "For large datasets, use batching (10 transcripts per batch recommended)",
+            "Process datasets of 50 transcripts or fewer in a single batch",
+            skill_text,
+        )
+        self.assertIn(
+            "For datasets with more than 50 transcripts, use parallel batches "
+            "(20 transcripts per batch recommended)",
             skill_text,
         )
         self.assertNotIn("--harness claude|codex|warp", skill_text)
@@ -36,6 +41,12 @@ class ReportRendererTests(unittest.TestCase):
         self.assertIn("| Warp | `warp` |", harness_text)
         self.assertIn("| Claude Code | `claude` |", harness_text)
         self.assertIn("| Codex | `codex` |", harness_text)
+        self.assertIn(
+            "Skill discovery and conversation collection are separate "
+            "compatibility layers",
+            harness_text,
+        )
+        self.assertIn("~/.gemini/tmp/<project-id>/chats/", harness_text)
         self.assertIn("stop before creating a report directory", harness_text)
 
     def test_code_diffs_follow_os_theme(self):
@@ -97,7 +108,7 @@ class ReportRendererTests(unittest.TestCase):
         self.assertNotIn("Do this automatically with Warp Factories", page)
         self.assertIn('<div class="stamp-row row factories-footer">', page)
         self.assertIn(
-            '<div class="stamp-name">Want to automate self improvement for your workflows?</div>',
+            '<div class="stamp-name">Self improve your workflows with Warp Factories</div>',
             page,
         )
         self.assertIn(">Request access to Warp Factories</a>", page)
