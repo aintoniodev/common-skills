@@ -124,7 +124,7 @@ class ReportRendererTests(unittest.TestCase):
         skill_path = Path(__file__).resolve().parent.parent / "SKILL.md"
 
         self.assertIn(
-            "- Automate this with Warp Factories: [Request early access]",
+            "- Automate this with Warp Factories: [Learn more]",
             skill_path.read_text(),
         )
 
