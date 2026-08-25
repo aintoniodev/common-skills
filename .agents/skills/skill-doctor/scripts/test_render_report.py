@@ -27,7 +27,10 @@ class ReportRendererTests(unittest.TestCase):
             skill_text,
         )
         self.assertIn("Project skills only", skill_text)
-        self.assertIn("Analyze no more than 10 transcripts per batch", skill_text)
+        self.assertIn(
+            "For large datasets, use batching (10 transcripts per batch recommended)",
+            skill_text,
+        )
         self.assertNotIn("--harness claude|codex|warp", skill_text)
         self.assertNotIn("--claude-home PATH", skill_text)
         self.assertIn("| Warp | `warp` |", harness_text)
