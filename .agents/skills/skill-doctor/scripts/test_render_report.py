@@ -31,6 +31,12 @@ class ReportRendererTests(unittest.TestCase):
         self.assertIn("@media (prefers-color-scheme: dark)", page)
         self.assertIn("--page-bg: #0f0d14", page)
         self.assertIn("background: var(--surface)", page)
+        self.assertIn(
+            "--mono-font: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            page,
+        )
+        self.assertIn("--diffs-font-family: var(--mono-font)", page)
+        self.assertIn("--diffs-header-font-family: var(--mono-font)", page)
 
     def test_factories_footer_is_sticky_and_contains_inline_cta(self):
         report = {

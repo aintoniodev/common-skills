@@ -100,12 +100,13 @@ STAMP_SUB = "continuous scoring \u00b7 continuous skill tuning"
 PAGE_CSS = """
 * { box-sizing: border-box; }
 body {
+  --mono-font: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --fg: #1a1522; --muted: #5d5966; --muted-2: #918d9a; --accent: #2a1eff;
   --line: rgba(13, 10, 61, 0.16); --line-soft: rgba(13, 10, 61, 0.07);
   --page-bg: #fff; --surface: #fff; --bg-panel: #f6f5fb; --yellow: #eef17c;
   --button-fg: #1a1522;
   --footer-shadow: rgba(13, 10, 61, 0.12);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--mono-font);
   background: radial-gradient(circle at 1px 1px, var(--line-soft) 1px, transparent 0) 0 0 / 22px 22px, var(--page-bg);
   color: var(--fg); max-width: 900px; margin: 0 auto; padding: 48px 24px;
   line-height: 1.65; font-size: 13px; color-scheme: light;
@@ -162,7 +163,8 @@ li { margin-bottom: 10px; }
 .stat .num { font-size: 34px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .stat .lbl { font-size: 12px; color: var(--muted); margin-top: 2px; text-transform: lowercase; }
 .diff-wrap { margin: 10px 0 4px; }
-.diff-view { display: grid; gap: 10px; max-width: 100%; }
+.diff-view { display: grid; gap: 10px; max-width: 100%;
+  --diffs-font-family: var(--mono-font); --diffs-header-font-family: var(--mono-font); }
 .diff-view > * { min-width: 0; }
 .diff-fallback { background: var(--bg-panel); border: 1px solid var(--line); padding: 13px 16px;
   color: var(--muted); font-size: 12px; line-height: 1.7; overflow-x: auto; margin: 0; white-space: pre; }
