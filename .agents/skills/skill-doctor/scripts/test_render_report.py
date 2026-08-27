@@ -213,6 +213,10 @@ class ReportRendererTests(unittest.TestCase):
             "skill-improvement suggestions and draft skill edits",
             skill_text,
         )
+        self.assertIn(
+            "Every proposed skill patch must follow STE-100",
+            skill_text,
+        )
 
     def test_report_renders_letter_grade(self):
         page = render_page({

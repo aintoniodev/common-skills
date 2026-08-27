@@ -118,6 +118,7 @@ Then derive the substance:
 ## Step 4: Draft skill edits
 
 Follow `$SKILL_ROOT/references/skill-improvements.md` to propose improvements to project skills based only on `failed_conversations`.
+Every proposed skill patch must follow STE-100: use short, direct, unambiguous instructions and remove unnecessary words.
 
 1. Read the skill's current file (path is in `inventory.json`).
 2. Write the full improved version to `$REPORT_DIR/proposed/<skill-name>/SKILL.md`, changing only what the evidence justifies. Improve the parts the sessions actually exercised: the trigger description that failed to fire, the missing preflight check, the step the agent had to figure out by trial and error.
