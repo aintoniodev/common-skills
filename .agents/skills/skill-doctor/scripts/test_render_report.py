@@ -4,7 +4,7 @@
 import unittest
 from pathlib import Path
 
-from render_report import embedded_diffs_script, render_page
+from render_report import embedded_diffs_script, format_generated_at, render_page
 
 
 class ReportRendererTests(unittest.TestCase):
@@ -108,11 +108,23 @@ class ReportRendererTests(unittest.TestCase):
         self.assertNotIn("Do this automatically with Warp Factories", page)
         self.assertIn('<div class="stamp-row row factories-footer">', page)
         self.assertIn(
-            '<div class="stamp-name">Self improve your workflows with Warp Factories</div>',
+            '<div class="stamp-name">Automatically improve your skills with Warp Factories</div>',
             page,
         )
-        self.assertIn(">Request access to Warp Factories</a>", page)
+        self.assertIn(">Request access</a>", page)
         self.assertIn(".factories-footer { position: sticky; bottom: 16px;", page)
+        self.assertNotIn("all analysis ran locally", page)
+        self.assertIn(
+            "Generated August 25, 2026 at 12:00 AM UTC &middot; harness: codex",
+            page,
+        )
+
+    def test_generated_timestamp_formatting(self):
+        self.assertEqual(
+            format_generated_at("2026-08-27T22:06:10.421941+00"),
+            "August 27, 2026 at 10:06 PM UTC",
+        )
+        self.assertEqual(format_generated_at("not-a-date"), "not-a-date")
 
     def test_share_card_uses_skill_doctor_attribution(self):
         page = render_page({
@@ -126,11 +138,35 @@ class ReportRendererTests(unittest.TestCase):
 
         self.assertIn(
             '"stamp": ["Get your report with /skill-doctor", '
-            '"npx skills add warpdotdev/common-skills --skill skill-doctor"]',
+            '"warp.dev/skill-doctor"]',
             page,
         )
         self.assertIn('"eyebrow": "skill-doctor"', page)
         self.assertIn("text('# ' + CARD.eyebrow", page)
+
+    def test_report_metric_lines_animate_like_skill_doctor_landing_page(self):
+        page = render_page({
+            "scores": {
+                "efficiency": 0.75,
+                "code_quality": 0.93,
+                "skill_coverage": 0.74,
+                "overall": 0.82,
+            },
+        })
+
+        self.assertIn(
+            "animation: skill-doctor-fill 700ms "
+            "cubic-bezier(0.22, 1, 0.36, 1) var(--metric-delay) both",
+            page,
+        )
+        self.assertIn("@keyframes skill-doctor-fill", page)
+        self.assertIn("from { transform: scaleX(0); }", page)
+        self.assertIn("to { transform: scaleX(1); }", page)
+        self.assertIn("width:75%;--metric-delay:180ms", page)
+        self.assertIn("width:93%;--metric-delay:290ms", page)
+        self.assertIn("width:74%;--metric-delay:400ms", page)
+        self.assertIn("@media (prefers-reduced-motion: reduce)", page)
+        self.assertIn(".bar-fill { animation: none; }", page)
 
     def test_skill_output_uses_report_and_warp_factories_labels(self):
         skill_path = Path(__file__).resolve().parent.parent / "SKILL.md"
