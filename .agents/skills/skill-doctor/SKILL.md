@@ -106,9 +106,7 @@ Instructions: For each transcript in `$REPORT_DIR/transcripts/`, read it and jud
 - `skill_coverage` = fraction of sampled sessions where at least one installed skill was detected. If `skills_found` is 0, coverage is 0.
 - `overall = 0.5 * efficiency + 0.35 * code_quality + 0.15 * skill_coverage.`
 
-The curve maps raw scores of `1.0`, `0.8`, `0.4`, and `0.2` to report scores of `1.0`, `0.9`, `0.7`, and `0.6`. Keep `skill_coverage` literal because it is an observed fraction, not a qualitative rubric score.
-
-Separately from report aggregation, define `failed_conversations` from each conversation's raw, uncurved scorer results. A conversation fails when at least one applicable efficiency or code-quality score is below `0.5`. An `insufficient_evidence` result does not make a conversation fail. Use only `failed_conversations` as evidence for skill-improvement suggestions and draft skill edits; passing conversations can inform the report findings but must not motivate an edit.
+Then, define `failed_conversations` from each conversation's raw, uncurved scorer results. A conversation fails when at least one applicable efficiency or code-quality score is below `0.5`. An `insufficient_evidence` result does not make a conversation fail. Use only `failed_conversations` as evidence for skill-improvement suggestions and draft skill edits.
 
 Then derive the substance:
 
@@ -118,7 +116,6 @@ Then derive the substance:
 ## Step 4: Draft skill edits
 
 Follow `$SKILL_ROOT/references/skill-improvements.md` to propose improvements to project skills based only on `failed_conversations`.
-Every proposed skill patch must follow STE-100: use short, direct, unambiguous instructions and remove unnecessary words.
 
 1. Read the skill's current file (path is in `inventory.json`).
 2. Write the full improved version to `$REPORT_DIR/proposed/<skill-name>/SKILL.md`, changing only what the evidence justifies. Improve the parts the sessions actually exercised: the trigger description that failed to fire, the missing preflight check, the step the agent had to figure out by trial and error.
