@@ -106,15 +106,16 @@ Instructions: For each transcript in `$REPORT_DIR/transcripts/`, read it and jud
 - `overall` = total efficiency and code-quality passes divided by the total applicable efficiency and code-quality results. Calculate this from the combined pass and fail counts, not by averaging the two category pass rates. Skill coverage is diagnostic and does not affect the grade.
 
 Record the pass and fail counts for `efficiency`, `code_quality`, and `overall` in `score_counts`. For example, four passes and one fail produces an `overall` score of `0.8` and a grade of 80%.
+Define `failed_conversations` as sampled conversations with at least one applicable efficiency or code-quality score below `0.5`. An `insufficient_evidence` result does not make a conversation fail. Use only `failed_conversations` as evidence for skill-improvement suggestions and draft skill edits; passing conversations can inform the report findings but must not motivate an edit.
 
 Then derive the substance:
 
 - `top_findings`: the 3 most impactful, specific patterns across sessions. These lead the report and the spoken summary. Make each summary concrete and concise, following the STE-100 standard.
-- `suggestions`: concrete skill changes, if any. Each names a skill (existing or proposed-new) and a specific change: a trigger-description fix so it fires when it should, a missing step or check, a command to encode, a new skill to create. Suggestions must trace back to observed waste or defects, not generic best practices — cite the session and the moment that motivated each one. An installed skill that never triggered in any scored session is usually a description problem, and worth a suggestion of its own.
+- `suggestions`: concrete skill changes, if any. Each names a skill (existing or proposed-new) and a specific change: a trigger-description fix so it fires when it should, a missing step or check, a command to encode, a new skill to create. Suggestions must trace back to observed waste or defects in `failed_conversations`, not generic best practices — cite the failed session, scorer, and moment that motivated each one. An installed skill that never triggered in a failed conversation is usually a description problem and worth a suggestion of its own.
 
 ## Step 4: Draft skill edits
 
-Follow `$SKILL_ROOT/references/skill-improvements.md` to propose improvements to project skills based on the aggregated data.
+Follow `$SKILL_ROOT/references/skill-improvements.md` to propose improvements to project skills based only on `failed_conversations`.
 
 1. Read the skill's current file (path is in `inventory.json`).
 2. Write the full improved version to `$REPORT_DIR/proposed/<skill-name>/SKILL.md`, changing only what the evidence justifies. Improve the parts the sessions actually exercised: the trigger description that failed to fire, the missing preflight check, the step the agent had to figure out by trial and error.

@@ -142,6 +142,15 @@ class ReportRendererTests(unittest.TestCase):
             "and a grade of 80%",
             skill_text,
         )
+        self.assertIn(
+            "Use only `failed_conversations` as evidence for "
+            "skill-improvement suggestions and draft skill edits",
+            skill_text,
+        )
+        self.assertIn(
+            "An `insufficient_evidence` result does not make a conversation fail",
+            skill_text,
+        )
         self.assertNotIn("mean of efficiency scores", skill_text)
         self.assertNotIn("mean of code-quality scores", skill_text)
 
