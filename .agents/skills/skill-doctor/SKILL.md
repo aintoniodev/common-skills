@@ -98,12 +98,17 @@ Instructions: For each transcript in `$REPORT_DIR/transcripts/`, read it and jud
 
 ## Step 3: Aggregate
 
-- `efficiency` = mean of efficiency scores across all scored sessions.
-- `code_quality` = mean of code-quality scores, excluding `insufficient_evidence`. If no session had enough evidence, set it to 0.5 and say so in the findings.
+- `raw_efficiency` = mean of efficiency scores across all scored sessions.
+- `raw_code_quality` = mean of code-quality scores, excluding `insufficient_evidence`. If no session had enough evidence, set it to 0.5 and say so in the findings.
+- Curve qualitative rubric means into letter-grade report scores with `curve(score) = 0.5 + 0.5 * score`.
+- `efficiency = curve(raw_efficiency)`.
+- `code_quality = curve(raw_code_quality)`.
 - `skill_coverage` = fraction of sampled sessions where at least one installed skill was detected. If `skills_found` is 0, coverage is 0.
 - `overall = 0.5 * efficiency + 0.35 * code_quality + 0.15 * skill_coverage.`
 
-Separately from report aggregation, define `failed_conversations` as sampled conversations with at least one applicable efficiency or code-quality score below `0.5`. An `insufficient_evidence` result does not make a conversation fail. Use only `failed_conversations` as evidence for skill-improvement suggestions and draft skill edits; passing conversations can inform the report findings but must not motivate an edit.
+The curve maps raw scores of `1.0`, `0.8`, `0.4`, and `0.2` to report scores of `1.0`, `0.9`, `0.7`, and `0.6`. Keep `skill_coverage` literal because it is an observed fraction, not a qualitative rubric score.
+
+Separately from report aggregation, define `failed_conversations` from each conversation's raw, uncurved scorer results. A conversation fails when at least one applicable efficiency or code-quality score is below `0.5`. An `insufficient_evidence` result does not make a conversation fail. Use only `failed_conversations` as evidence for skill-improvement suggestions and draft skill edits; passing conversations can inform the report findings but must not motivate an edit.
 
 Then derive the substance:
 
@@ -123,8 +128,7 @@ For a proposed-new skill, write the complete new SKILL.md to the same `proposed/
 Do not modify the user's real skill files in this step.
 
 ## Step 5: Write report.json and render
-
-Write `$REPORT_DIR/report.json`:
+Write `$REPORT_DIR/report.json`. Store the curved `efficiency` and `code_quality` values, literal `skill_coverage`, and weighted `overall` in `scores`; do not store the raw rubric means there.
 
 ```json
 {

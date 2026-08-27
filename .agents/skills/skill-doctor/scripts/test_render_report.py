@@ -151,7 +151,16 @@ class ReportRendererTests(unittest.TestCase):
         skill_text = skill_path.read_text()
 
         self.assertIn(
-            "`efficiency` = mean of efficiency scores across all scored sessions",
+            "`raw_efficiency` = mean of efficiency scores across all scored sessions",
+            skill_text,
+        )
+        self.assertIn(
+            "`curve(score) = 0.5 + 0.5 * score`",
+            skill_text,
+        )
+        self.assertIn(
+            "raw scores of `1.0`, `0.8`, `0.4`, and `0.2` to report scores "
+            "of `1.0`, `0.9`, `0.7`, and `0.6`",
             skill_text,
         )
         self.assertIn(
@@ -160,8 +169,7 @@ class ReportRendererTests(unittest.TestCase):
             skill_text,
         )
         self.assertIn(
-            "with at least one applicable efficiency or code-quality score "
-            "below `0.5`",
+            "from each conversation's raw, uncurved scorer results",
             skill_text,
         )
         self.assertIn(
@@ -173,15 +181,15 @@ class ReportRendererTests(unittest.TestCase):
     def test_report_renders_letter_grade(self):
         page = render_page({
             "scores": {
-                "efficiency": 0.8,
-                "code_quality": 0.8,
+                "efficiency": 0.7,
+                "code_quality": 0.7,
                 "skill_coverage": 0.8,
-                "overall": 0.8,
+                "overall": 0.7,
             },
         })
 
-        self.assertIn('<div class="grade">B-</div>', page)
-        self.assertIn('<div class="grade-label">overall 80</div>', page)
+        self.assertIn('<div class="grade">C-</div>', page)
+        self.assertIn('<div class="grade-label">overall 70</div>', page)
 
 
 if __name__ == "__main__":
