@@ -94,14 +94,18 @@ Scoring is based on efficiency and code quality for the sessions sampled. Proces
 - `$SKILL_ROOT/scorers/efficiency.md`
 - `$SKILL_ROOT/scorers/code-quality.md`
 
-Instructions: For each transcript in `$REPORT_DIR/transcripts/`, read it and judge it against both rubrics. For each scorer record: label, numeric score (from the rubric's label table), and a 1–3 sentence reason citing specifics from the transcript. Apply the code-quality scorer only where the transcript shows code changes; otherwise record `insufficient_evidence` and exclude that session from the code-quality average.
+Instructions: For each transcript in `$REPORT_DIR/transcripts/`, read it and judge it against both rubrics. For each scorer record: label, numeric score (from the rubric's label table), and a 1–3 sentence reason citing specifics from the transcript. Apply the code-quality scorer only where the transcript shows code changes; otherwise record `insufficient_evidence` and exclude that result from pass/fail aggregation.
 
 ## Step 3: Aggregate
 
-- `efficiency` = mean of efficiency scores across all scored sessions.
-- `code_quality` = mean of code-quality scores, excluding `insufficient_evidence`. If no session had enough evidence, set it to 0.5 and say so in the findings.
+- An efficiency result passes when its numeric score is at least `0.5`; otherwise it fails.
+- A code-quality result passes when its numeric score is at least `0.5`; otherwise it fails. Exclude `insufficient_evidence` results before applying the threshold.
+- `efficiency` = efficiency passes divided by all efficiency results.
+- `code_quality` = code-quality passes divided by all applicable code-quality results. If no session had enough evidence, set it to `null` and say so in the findings.
 - `skill_coverage` = fraction of sampled sessions where at least one installed skill was detected. If `skills_found` is 0, coverage is 0.
-- `overall = 0.5 * efficiency + 0.35 * code_quality + 0.15 * skill_coverage.`
+- `overall` = total efficiency and code-quality passes divided by the total applicable efficiency and code-quality results. Calculate this from the combined pass and fail counts, not by averaging the two category pass rates. Skill coverage is diagnostic and does not affect the grade.
+
+Record the pass and fail counts for `efficiency`, `code_quality`, and `overall` in `score_counts`. For example, four passes and one fail produces an `overall` score of `0.8` and a grade of 80%.
 
 Then derive the substance:
 
@@ -134,7 +138,12 @@ Write `$REPORT_DIR/report.json`:
     "sessions_analyzed": 0, "sessions_scanned": 0,
     "skills_found": 0, "skills_used": 0, "window_days": 45
   },
-  "scores": {"efficiency": 0.0, "code_quality": 0.0, "skill_coverage": 0.0, "overall": 0.0},
+  "scores": {"efficiency": 0.0, "code_quality": null, "skill_coverage": 0.0, "overall": 0.0},
+  "score_counts": {
+    "efficiency": {"passes": 0, "fails": 0},
+    "code_quality": {"passes": 0, "fails": 0},
+    "overall": {"passes": 0, "fails": 0}
+  },
   "top_findings": ["", "", ""],
   "suggestions": [
     {

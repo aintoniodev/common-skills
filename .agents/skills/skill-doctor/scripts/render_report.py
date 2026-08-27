@@ -17,12 +17,6 @@ import re
 import sys
 from pathlib import Path
 
-GRADES = [
-    (0.97, "A+"), (0.93, "A"), (0.90, "A-"),
-    (0.87, "B+"), (0.83, "B"), (0.80, "B-"),
-    (0.77, "C+"), (0.73, "C"), (0.70, "C-"),
-    (0.60, "D"), (0.0, "F"),
-]
 
 DIFFS_BUNDLE_PATH = (
     Path(__file__).resolve().parent.parent / "assets" / "pierre-diffs.js"
@@ -32,15 +26,60 @@ DIFFS_BUNDLE_PATH = (
 DIFF_CLAMP_PX = 320
 
 
-def grade_for(score: float) -> str:
-    for threshold, letter in GRADES:
-        if score >= threshold:
-            return letter
-    return "F"
-
 
 def pct(score) -> int:
     return round(float(score) * 100)
+
+
+def score_label(score) -> str:
+    """Format an aggregate score as a percentage or an inapplicable result."""
+    return "N/A" if score is None else f"{pct(score)}%"
+
+
+def score_counts(report, category):
+    counts = report.get("score_counts", {}).get(category, {})
+    passes = counts.get("passes")
+    fails = counts.get("fails")
+    if (
+        not isinstance(passes, int)
+        or not isinstance(fails, int)
+        or passes < 0
+        or fails < 0
+    ):
+        return None
+    return passes, fails
+
+
+def category_score(report, category):
+    counts = score_counts(report, category)
+    if counts is None:
+        return report["scores"].get(category)
+
+    passes, fails = counts
+    total = passes + fails
+    return passes / total if total else None
+
+
+def overall_score_and_counts(report):
+    efficiency_counts = score_counts(report, "efficiency")
+    code_quality_counts = score_counts(report, "code_quality")
+    if efficiency_counts is not None and code_quality_counts is not None:
+        passes = efficiency_counts[0] + code_quality_counts[0]
+        fails = efficiency_counts[1] + code_quality_counts[1]
+        total = passes + fails
+        if total:
+            return passes / total, (passes, fails)
+
+    return report["scores"]["overall"], score_counts(report, "overall")
+
+
+def overall_count_label(counts) -> str:
+    if counts is None:
+        return "overall pass rate"
+    passes, fails = counts
+    pass_word = "pass" if passes == 1 else "passes"
+    fail_word = "fail" if fails == 1 else "fails"
+    return f"{passes} {pass_word} · {fails} {fail_word}"
 
 
 def esc(v) -> str:
@@ -152,7 +191,7 @@ li { margin-bottom: 10px; }
 .scorecard { display: flex; align-items: center; gap: 48px; border: 1px solid var(--line);
   background: var(--surface); padding: 26px 28px; margin-top: 20px; }
 .grade-col { text-align: center; flex: none; width: 170px; }
-.grade { font-size: 96px; font-weight: 600; line-height: 1; letter-spacing: -5px; color: var(--accent); }
+.grade { font-size: 58px; font-weight: 600; line-height: 1; letter-spacing: -3px; color: var(--accent); }
 .grade-label { font-size: 11px; color: var(--muted-2); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.14em; }
 .bars { flex: 1; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .bar-head { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 7px; font-weight: 500; }
@@ -187,15 +226,19 @@ li { margin-bottom: 10px; }
 def render_page(r) -> str:
     scores = r["scores"]
     stats = r.get("stats", {})
-    grade = r.get("grade") or grade_for(scores["overall"])
+    overall_score, overall_counts = overall_score_and_counts(r)
+    grade = score_label(overall_score)
+    grade_label = overall_count_label(overall_counts)
+    efficiency_score = category_score(r, "efficiency")
+    code_quality_score = category_score(r, "code_quality")
 
     bars = "".join(
         f'<div class="bar-row"><div class="bar-head"><span class="bar-name">{esc(name)}</span>'
-        f'<span class="bar-val">{pct(val)}</span></div>'
-        f'<div class="bar-track"><div class="bar-fill" style="width:{pct(val)}%"></div></div></div>'
+        f'<span class="bar-val">{score_label(val)}</span></div>'
+        f'<div class="bar-track"><div class="bar-fill" style="width:{pct(val) if val is not None else 0}%"></div></div></div>'
         for name, val in [
-            ("Efficiency", scores.get("efficiency", 0)),
-            ("Code Quality", scores.get("code_quality", 0)),
+            ("Efficiency", efficiency_score),
+            ("Code Quality", code_quality_score),
             ("Skill Coverage", scores.get("skill_coverage", 0)),
         ]
     )
@@ -221,10 +264,18 @@ def render_page(r) -> str:
         "handle": r.get("handle") or "agent skill report",
         "harness": r.get("harness", "codex"),
         "grade": grade,
-        "grade_label": f"overall {pct(scores['overall'])}",
+        "grade_label": grade_label,
         "bars": [
-            ["Efficiency", pct(scores.get("efficiency", 0))],
-            ["Code Quality", pct(scores.get("code_quality", 0))],
+            [
+                "Efficiency",
+                pct(efficiency_score) if efficiency_score is not None else None,
+            ],
+            [
+                "Code Quality",
+                pct(code_quality_score)
+                if code_quality_score is not None
+                else None,
+            ],
             ["Skill Coverage", pct(scores.get("skill_coverage", 0))],
         ],
         "meta": f"{stats.get('sessions_scanned', 0)} conversations found \u00b7 "
@@ -251,7 +302,7 @@ def render_page(r) -> str:
 <p class="muted">Generated {esc(r.get('generated_at', ''))} &middot; harness: {esc(r.get('harness', 'codex'))} &middot; all analysis ran locally</p>
 <div class="scorecard">
   <div class="grade-col"><div class="grade">{esc(grade)}</div>
-    <div class="grade-label">overall {pct(scores['overall'])}</div></div>
+    <div class="grade-label">{esc(grade_label)}</div></div>
   <div class="bars">{bars}</div>
 </div>
 <div class="stats">{stat_cells}</div>
@@ -403,7 +454,7 @@ def page_script(card_data: str) -> str:
 
     var mainMid = barBottom + 74 + (405 - 74) / 2;
 
-    font('600', 170);
+    font('600', 150);
     track('-8px');
     c.fillStyle = ACCENT;
     text(CARD.grade, fx + 186, mainMid - 15, 'center');
@@ -424,13 +475,15 @@ def page_script(card_data: str) -> str:
       c.fillStyle = FG;
       text(bar[0].toLowerCase(), bx, y + 9);
       font('600', 14);
-      text(String(bar[1]), bx + bw, y + 9, 'right');
+      text(bar[1] === null ? 'N/A' : String(bar[1]) + '%', bx + bw, y + 9, 'right');
       c.fillStyle = LINE_SOFT;
       c.fillRect(bx, y + 27, bw, 8);
       c.strokeStyle = LINE;
       c.strokeRect(bx + 0.5, y + 27.5, bw - 1, 7);
-      c.fillStyle = ACCENT;
-      c.fillRect(bx, y + 27, bw * Math.max(0, Math.min(100, bar[1])) / 100, 8);
+      if (bar[1] !== null) {
+        c.fillStyle = ACCENT;
+        c.fillRect(bx, y + 27, bw * Math.max(0, Math.min(100, bar[1])) / 100, 8);
+      }
     });
 
     // stats
@@ -505,7 +558,6 @@ def main():
         print(f"error: {report_path} not found", file=sys.stderr)
         sys.exit(1)
     r = json.loads(report_path.read_text())
-    r.setdefault("grade", grade_for(r["scores"]["overall"]))
 
     out_path = report_path.parent / "report.html"
     out_path.write_text(render_page(r))

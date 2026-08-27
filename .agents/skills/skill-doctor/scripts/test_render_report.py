@@ -79,6 +79,72 @@ class ReportRendererTests(unittest.TestCase):
         self.assertIn("--diffs-font-family: var(--mono-font)", page)
         self.assertIn("--diffs-header-font-family: var(--mono-font)", page)
 
+    def test_report_renders_overall_pass_rate_and_counts(self):
+        page = render_page({
+            "scores": {
+                "efficiency": 0.1,
+                "code_quality": 0.1,
+                "skill_coverage": 0.5,
+                "overall": 0.1,
+            },
+            "score_counts": {
+                "efficiency": {"passes": 3, "fails": 1},
+                "code_quality": {"passes": 1, "fails": 0},
+                "overall": {"passes": 4, "fails": 1},
+            },
+        })
+
+        self.assertIn('<div class="grade">80%</div>', page)
+        self.assertIn('<div class="grade-label">4 passes · 1 fail</div>', page)
+        self.assertIn('<span class="bar-val">75%</span>', page)
+        self.assertIn('<span class="bar-val">100%</span>', page)
+
+    def test_report_renders_missing_code_quality_as_not_applicable(self):
+        page = render_page({
+            "scores": {
+                "efficiency": 1.0,
+                "code_quality": None,
+                "skill_coverage": 0.0,
+                "overall": 1.0,
+            },
+            "score_counts": {
+                "efficiency": {"passes": 1, "fails": 0},
+                "code_quality": {"passes": 0, "fails": 0},
+                "overall": {"passes": 1, "fails": 0},
+            },
+        })
+
+        self.assertIn('<span class="bar-val">N/A</span>', page)
+        self.assertIn('["Code Quality", null]', page)
+        self.assertIn(
+            '<div class="grade-label">1 pass · 0 fails</div>',
+            page,
+        )
+
+    def test_skill_uses_thresholded_pass_rate_aggregation(self):
+        skill_path = Path(__file__).resolve().parent.parent / "SKILL.md"
+        skill_text = skill_path.read_text()
+
+        self.assertIn(
+            "An efficiency result passes when its numeric score is at least `0.5`",
+            skill_text,
+        )
+        self.assertIn(
+            "A code-quality result passes when its numeric score is at least `0.5`",
+            skill_text,
+        )
+        self.assertIn(
+            "Skill coverage is diagnostic and does not affect the grade",
+            skill_text,
+        )
+        self.assertIn(
+            "four passes and one fail produces an `overall` score of `0.8` "
+            "and a grade of 80%",
+            skill_text,
+        )
+        self.assertNotIn("mean of efficiency scores", skill_text)
+        self.assertNotIn("mean of code-quality scores", skill_text)
+
     def test_factories_footer_is_sticky_and_contains_inline_cta(self):
         report = {
             "title": "Agent Skill Report",
