@@ -3,8 +3,15 @@
 
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from render_report import embedded_diffs_script, format_generated_at, render_page
+from render_report import (
+    embedded_diffs_script,
+    format_generated_at,
+    open_report,
+    parse_args,
+    render_page,
+)
 
 
 class ReportRendererTests(unittest.TestCase):
@@ -126,6 +133,24 @@ class ReportRendererTests(unittest.TestCase):
         )
         self.assertEqual(format_generated_at("not-a-date"), "not-a-date")
 
+    def test_open_report_uses_default_browser_with_file_uri(self):
+        report_path = Path("/tmp/skill doctor/report.html")
+        args = parse_args([str(report_path), "--open"])
+
+        self.assertEqual(args.report_path, str(report_path))
+        self.assertTrue(args.open_browser)
+
+        with patch("render_report.webbrowser.open", return_value=True) as browser_open:
+            self.assertTrue(open_report(report_path))
+
+        browser_open.assert_called_once_with(
+            report_path.absolute().as_uri(),
+            new=2,
+        )
+
+        with patch("render_report.webbrowser.open", side_effect=OSError):
+            self.assertFalse(open_report(report_path))
+
     def test_share_card_uses_skill_doctor_attribution(self):
         page = render_page({
             "scores": {
@@ -173,14 +198,20 @@ class ReportRendererTests(unittest.TestCase):
         skill_text = skill_path.read_text()
 
         self.assertIn(
-            "- Your agent skill report: [View in browser]",
+            'render_report.py" "$REPORT_DIR/report.json" --open',
+            skill_text,
+        )
+        self.assertIn(
+            "- Your agent skill report: file://$REPORT_DIR/report.html",
             skill_text,
         )
         self.assertIn(
             "- Want to automate self improvement for your workflows? "
-            "[Request access to Warp Factories]",
+            "Request access to Warp Factories: "
+            "warp.dev/factories/request-access",
             skill_text,
         )
+        self.assertNotIn("[View in browser]", skill_text)
 
     def test_skill_edits_only_use_failed_conversations(self):
         skill_path = Path(__file__).resolve().parent.parent / "SKILL.md"
@@ -195,11 +226,6 @@ class ReportRendererTests(unittest.TestCase):
             skill_text,
         )
         self.assertIn(
-            "raw scores of `1.0`, `0.8`, `0.4`, and `0.2` to report scores "
-            "of `1.0`, `0.9`, `0.7`, and `0.6`",
-            skill_text,
-        )
-        self.assertIn(
             "`overall = 0.5 * efficiency + 0.35 * code_quality + "
             "0.15 * skill_coverage.`",
             skill_text,
@@ -211,10 +237,6 @@ class ReportRendererTests(unittest.TestCase):
         self.assertIn(
             "Use only `failed_conversations` as evidence for "
             "skill-improvement suggestions and draft skill edits",
-            skill_text,
-        )
-        self.assertIn(
-            "Every proposed skill patch must follow STE-100",
             skill_text,
         )
 

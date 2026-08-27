@@ -10,11 +10,13 @@ Python 3.9+, stdlib only. Uses system fonts so the page and the exported PNG
 render the same everywhere.
 """
 
+import argparse
 import base64
 import html
 import json
 import re
 import sys
+import webbrowser
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -64,6 +66,13 @@ def format_generated_at(value) -> str:
         f"{generated_at.strftime('%B')} {generated_at.day}, "
         f"{generated_at.year} at {time}{suffix}"
     )
+
+
+def open_report(report_path: Path) -> bool:
+    try:
+        return bool(webbrowser.open(report_path.absolute().as_uri(), new=2))
+    except (OSError, webbrowser.Error):
+        return False
 
 
 def esc(v) -> str:
@@ -531,10 +540,26 @@ def page_script(card_data: str) -> str:
     return script.replace("__CARD__", card_data.replace("</", "<\\/")).replace("__CLAMP__", str(DIFF_CLAMP_PX))
 
 
-def main():
-    report_path = Path(
-        sys.argv[1] if len(sys.argv) > 1 else "./skill-doctor-report/report.json"
-    ).expanduser()
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "report_path",
+        nargs="?",
+        default="./skill-doctor-report/report.json",
+        help="Path to the report.json file",
+    )
+    parser.add_argument(
+        "--open",
+        action="store_true",
+        dest="open_browser",
+        help="Open the generated report in the default browser",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
+    report_path = Path(args.report_path).expanduser()
     if not report_path.exists():
         print(f"error: {report_path} not found", file=sys.stderr)
         sys.exit(1)
@@ -543,8 +568,16 @@ def main():
 
     out_path = report_path.parent / "report.html"
     out_path.write_text(render_page(r))
-    print(f"report: {out_path}")
-    print('        open it and hit "share as png" for a 1200x675 share image')
+    print(f"report: {out_path.absolute().as_uri()}")
+    if args.open_browser:
+        if open_report(out_path):
+            print("        opened in the default browser")
+        else:
+            print(
+                "warning: could not open the report in the default browser",
+                file=sys.stderr,
+            )
+    print('        use "share as png" for a 1200x675 share image')
 
 
 if __name__ == "__main__":
