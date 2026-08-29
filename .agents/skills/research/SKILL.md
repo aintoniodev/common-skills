@@ -37,6 +37,12 @@ The cost of a subagent is real (latency and tokens), so the test is always: does
 
 ## How to do it
 
+### Spawn locally with a search model
+
+Always spawn research subagents as **local** agents, never remote — including when the parent is a factory or cloud agent.
+
+Pick the model for the search task, not your own. Research subagents should search and distill, not analyze: use `gpt-5.6-luna-medium` for simple search, and `gpt-5.6-luna-xhigh` for more involved requests (for example, tracing data flow through call sites).
+
 ### Single vs. parallel
 
 Default to a **single subagent**. Spawn **multiple subagents in parallel** only when the question genuinely decomposes into independent sub-parts that don't need to share intermediate findings — for example, "how does auth work AND how does billing work AND how does the rate limiter work" are three independent investigations that can run at once. Parallelism is a capability worth using when the parts are truly independent, since separate subagents can investigate simultaneously; but don't force a single coherent question into artificial fragments.
