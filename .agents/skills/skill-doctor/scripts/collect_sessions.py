@@ -140,15 +140,15 @@ def discover_skills(repos, codex_home: Path, extra_dirs, include_global: bool,
             repo / ".claude" / "skills",
             repo / ".codex" / "skills",
         ))
-        if include_global:
-            roots += [
-                codex_home / "skills",
-                Path.home() / ".agents" / "skills",
-                Path.home() / ".claude" / "skills",
-            ]
-            for home in (pi_home, grok_home, zcode_home):
-                if home is not None:
-                    roots.append(Path(home) / "skills")
+    if include_global:
+        roots += [
+            codex_home / "skills",
+            Path.home() / ".agents" / "skills",
+            Path.home() / ".claude" / "skills",
+        ]
+        for home in (pi_home, grok_home, zcode_home):
+            if home is not None:
+                roots.append(Path(home) / "skills")
     roots += [Path(d).expanduser() for d in extra_dirs]
 
     skills = {}

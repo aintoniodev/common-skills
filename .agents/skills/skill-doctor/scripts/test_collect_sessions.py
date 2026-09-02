@@ -55,6 +55,37 @@ class ClaudeSessionTests(unittest.TestCase):
                 session_matches_repos(root / "elsewhere", [first, second])
             )
 
+    def test_discovers_global_skills_without_repositories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            homes = {
+                name: root / f"{name}-home"
+                for name in ("codex", "pi", "grok", "zcode")
+            }
+            for name, home in homes.items():
+                skill = home / "skills" / f"{name}-skill" / "SKILL.md"
+                skill.parent.mkdir(parents=True)
+                skill.write_text(f"---\ndescription: {name.title()} skill\n---\n")
+
+            skills = discover_skills(
+                [],
+                homes["codex"],
+                [],
+                True,
+                pi_home=homes["pi"],
+                grok_home=homes["grok"],
+                zcode_home=homes["zcode"],
+            )
+
+            self.assertTrue(
+                {
+                    "codex-skill",
+                    "pi-skill",
+                    "grok-skill",
+                    "zcode-skill",
+                }.issubset(skills)
+            )
+
     def test_detects_skills_from_deferred_tool_entries(self):
         entries = [
             ("tool:Skill", '{"skill": "alpha"}'),
